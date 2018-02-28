@@ -6,11 +6,23 @@ import java.net.MulticastSocket;
 import java.net.UnknownHostException;
 
 public class MulticastSocketClient {
+	
+	// 224.0.0.0 to 239.255.255.255
     
-    final static String INET_ADDR = "224.0.0.3";
-    final static int PORT = 8888;
+    //final static String INET_ADDR = "224.0.0.3";
+    //final static int PORT = 8888;
+
+	static String INET_ADDR;
+	static int PORT;
 
     public static void main(String[] args) throws UnknownHostException {
+    	
+    	/*if (!validArgumentNumber(args)) {
+    		return;
+    	}*/
+    	
+    	parseArguments(args);
+    	
         // Get the address that we are going to connect to.
         InetAddress address = InetAddress.getByName(INET_ADDR);
         
@@ -22,10 +34,12 @@ public class MulticastSocketClient {
         // Create a new Multicast socket (that will allow other sockets/programs
         // to join it as well.
         try (MulticastSocket clientSocket = new MulticastSocket(PORT)){
-            //Joint the Multicast group.
+            
+        	//Joint the Multicast group.
             clientSocket.joinGroup(address);
      
             while (true) {
+            	
                 // Receive the information and print it.
                 DatagramPacket msgPacket = new DatagramPacket(buf, buf.length);
                 clientSocket.receive(msgPacket);
@@ -36,5 +50,22 @@ public class MulticastSocketClient {
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+    }
+    
+    private static boolean validArgumentNumber(String[] args) {
+    	if (args.length != 3) {
+    		System.out.println("USAGE: java client <mcast_addr> <mcast_port> <oper> <opnd>*");
+    		return false;
+    	}
+    	return true;
+    }
+    
+    private static void parseArguments(String[] args) {
+    	INET_ADDR = args[0];
+    	PORT = Integer.parseInt(args[1]);
+    	
+    	
+    	System.out.println(INET_ADDR);
+    	System.out.println(PORT);
     }
 }
