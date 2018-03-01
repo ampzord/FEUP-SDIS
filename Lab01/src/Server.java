@@ -1,9 +1,8 @@
-import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
-
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.util.Arrays;
 
 public class Server extends Thread {
 
@@ -16,7 +15,7 @@ public class Server extends Thread {
         server.start();
     }
 
-    public Server(int port_number) throws IOException {
+    private Server(int port_number) throws IOException {
         socket = new DatagramSocket(port_number);
     }
 
@@ -30,6 +29,7 @@ public class Server extends Thread {
                 DatagramPacket packet = new DatagramPacket(buf, buf.length);
                 socket.receive(packet);
                 String request = new String(packet.getData());
+                request = request.trim();
 
                 //print request
                 System.out.println("Server: Request - " + request);
@@ -56,12 +56,12 @@ public class Server extends Thread {
                 int port = packet.getPort();
                 packet = new DatagramPacket(buf, buf.length, address, port);
                 socket.send(packet);
-            } catch (IOException e) {
+            } catch (IOException ignored) {
             }
         }
     }
 
-    public Integer register(String plate, String owner){
+    private Integer register(String plate, String owner){
         int i;
         for(i = 0; i < plates.length; i++){
             if(plates[i] == null)
@@ -78,11 +78,11 @@ public class Server extends Thread {
         return i+1;
     }
 
-    public String lookup(String plate){
-        for(int i = 0; i < plates.length; i++){
+    private String lookup(String plate){
+        int i;
+        for(i = 0; i < plates.length; i++){
             if(plates[i] == null)
                 break;
-            System.out.println("debug: "+plates[i]+" "+i+" "+plate+" "+plates[i].compareTo(plate));
             if(plates[i].compareTo(plate) == 0){
                 System.out.println("Server: Plate registered to " + owners[i]);
                 return owners[i];

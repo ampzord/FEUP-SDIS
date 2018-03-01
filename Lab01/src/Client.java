@@ -3,8 +3,8 @@ import java.net.*;
 
 public class Client {
 
-    public String host_name;
-    public Integer port_number;
+    private String host_name;
+    private Integer port_number;
     private String oper;
     private String[] opnd;
 
@@ -22,13 +22,13 @@ public class Client {
         DatagramSocket socket = new DatagramSocket();
 
         // send request
-        byte[] buf = new byte[256];
-        buf = client.getCommand().getBytes();
+        byte[] buf = client.getCommand().getBytes();
         InetAddress address = InetAddress.getByName(client.host_name);
         DatagramPacket packet = new DatagramPacket(buf, buf.length, address, client.port_number);
         socket.send(packet);
 
         // get response
+        buf = new byte[256];
         packet = new DatagramPacket(buf, buf.length);
         socket.receive(packet);
 
@@ -39,26 +39,26 @@ public class Client {
         socket.close();
     }
 
-    public Client(String host, Integer port, String operation, String[] arguments){
+    private Client(String host, Integer port, String operation, String[] arguments){
         host_name = host;
         port_number = port;
         oper = operation;
         opnd = arguments;
         System.out.print("New Client: "+host+", "+port+", "+operation);
-        for(int i = 0; i < arguments.length; i++)
-            if(arguments[i] != null)
-                System.out.print(", " + arguments[i]);
+        for (String argument : arguments)
+            if (argument != null)
+                System.out.print(", " + argument);
         System.out.println();
     }
 
-    public String getCommand(){
+    private String getCommand(){
         System.out.print("Creating command: ");
 
         String command;
         command = oper;
-        for(int i = 0; i < opnd.length; i++)
-            if(opnd[i] != null)
-                command = command.concat(" " + opnd[i]);
+        for (String anOpnd : opnd)
+            if (anOpnd != null)
+                command = command.concat(" " + anOpnd);
 
         System.out.println(command);
         System.out.println("Command created.");
