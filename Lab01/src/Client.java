@@ -6,6 +6,7 @@ import java.util.concurrent.*;
 public class Client {
 
     private String mcast_addr;
+    private static DatagramSocket serviceSocket;
     private Integer mcast_port;
     private String oper;
     private String[] opnd;
@@ -21,32 +22,33 @@ public class Client {
         Client client = new Client(args[0], Integer.parseInt(args[1]), args[2], arguments);
 
         // join Multicast group
-        MulticastSocket socket = new MulticastSocket(client.mcast_port);
-        socket.setTimeToLive(1);
+        MulticastSocket multiSocket = new MulticastSocket(client.mcast_port);
+        multiSocket.setTimeToLive(1);
         InetAddress address = InetAddress.getByName(client.mcast_addr);
-        socket.joinGroup(address);
+        multiSocket.joinGroup(address);
         System.out.println("Joined Multicast server - Addr: " + client.mcast_addr + ", Port: " + client.mcast_port);
 
         // send request
         byte[] buf = client.getCommand().getBytes();
-        DatagramPacket packet = new DatagramPacket(buf, buf.length, address, client.mcast_port);
-        socket.send(packet);
+        DatagramPacket packet = new DatagramPacket(buf, buf.length, InetAddress.getLocalHost(), 4445);
+        serviceSocket.send(packet);
         System.out.println("Sent request");
 
         // get response
         buf = new byte[256];
         packet = new DatagramPacket(buf, buf.length);
-        socket.receive(packet);
+        multiSocket.receive(packet);
 
         // display response
         String received = new String(packet.getData(), 0, packet.getLength());
         System.out.println("Received response: " + received);
 
-        socket.leaveGroup(address);
-        socket.close();
+        multiSocket.leaveGroup(address);
+        multiSocket.close();
+        serviceSocket.close();
     }
 
-    private Client(String host, Integer port, String operation, String[] arguments){
+    private Client(String host, Integer port, String operation, String[] arguments) throws SocketException{
         mcast_addr = host;
         mcast_port = port;
         oper = operation;
@@ -56,6 +58,7 @@ public class Client {
             if (argument != null)
                 System.out.print(", " + argument);
         System.out.println();
+        serviceSocket = new DatagramSocket();
     }
 
     private String getCommand(){

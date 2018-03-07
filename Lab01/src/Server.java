@@ -1,11 +1,14 @@
 import java.io.IOException;
 import java.net.DatagramPacket;
-import java.net.InetAddress;
+import java.net.DatagramSocket;
 import java.net.MulticastSocket;
+import java.net.InetAddress;
 
 public class Server extends Thread {
 
-    private MulticastSocket socket;
+    private Integer srvc_port;
+    private MulticastSocket multiSocket;
+    private DatagramSocket serviceSocket;
     private InetAddress address;
     private Integer mcast_port;
     private String[] plates = new String[256];
@@ -17,12 +20,13 @@ public class Server extends Thread {
     }
 
     private Server(int service_port, String multicast_address, int multicast_port) throws IOException {
-        Integer srvc_port = service_port;
+        srvc_port = service_port;
         address = InetAddress.getByName(multicast_address);
         mcast_port = multicast_port;
-        socket = new MulticastSocket(mcast_port);
-        socket.joinGroup(address);
-        System.out.println("Started server: Addr - "+multicast_address+", Port - "+mcast_port);
+        serviceSocket = new DatagramSocket(srvc_port);
+        multiSocket = new MulticastSocket(multicast_port);
+
+        System.out.println("Started server: ServPort - "+srvc_port+"MulticastAddr - "+multicast_address+", MulticastPort - "+mcast_port);
     }
 
     @Override
@@ -33,7 +37,7 @@ public class Server extends Thread {
 
                 // receive request
                 DatagramPacket packet = new DatagramPacket(buf, buf.length);
-                socket.receive(packet);
+                serviceSocket.receive(packet);
                 String request = new String(packet.getData());
                 request = request.trim();
 
@@ -60,7 +64,7 @@ public class Server extends Thread {
                 // send the response to the client at "address" and "port"
                 buf = response.getBytes();
                 packet = new DatagramPacket(buf, buf.length, address, mcast_port);
-                socket.send(packet);
+                multiSocket.send(packet);
                 System.out.println("Response sent.");
             } catch (IOException ignored) {
             }
