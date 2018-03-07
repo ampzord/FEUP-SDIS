@@ -1,22 +1,28 @@
 import java.io.IOException;
 import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.util.Arrays;
+import java.net.MulticastSocket;
 
 public class Server extends Thread {
 
-    private DatagramSocket socket;
+    private MulticastSocket socket;
+    private InetAddress address;
+    private Integer mcast_port;
     private String[] plates = new String[256];
     private String[] owners = new String[256];
 
     public static void main(String[] args) throws IOException {
-        Server server = new Server(Integer.parseInt(args[0]));
+        Server server = new Server(Integer.parseInt(args[0]), args[1], Integer.parseInt(args[2]));
         server.start();
     }
 
-    private Server(int port_number) throws IOException {
-        socket = new DatagramSocket(port_number);
+    private Server(int service_port, String multicast_address, int multicast_port) throws IOException {
+        Integer srvc_port = service_port;
+        address = InetAddress.getByName(multicast_address);
+        mcast_port = multicast_port;
+        socket = new MulticastSocket(mcast_port);
+        socket.joinGroup(address);
+        System.out.println("Started server: Addr - "+multicast_address+", Port - "+mcast_port);
     }
 
     @Override
@@ -32,10 +38,11 @@ public class Server extends Thread {
                 request = request.trim();
 
                 //print request
-                System.out.println("Server: Request - " + request);
+                System.out.println("Received request: " + request);
                 String[] params = request.split(" ");
 
                 // analyze request
+                System.out.println("Analyzing request...");
                 String response;
 
                 if (params[0].compareTo("REGISTER") == 0) {
@@ -46,16 +53,15 @@ public class Server extends Thread {
                     String plate_number = params[1];
                     response = this.lookup(plate_number);
                 } else{
-                    System.out.println("Server: Invalid operation.");
-                    return;
+                    System.out.println("Invalid operation.");
+                    continue;
                 }
 
                 // send the response to the client at "address" and "port"
                 buf = response.getBytes();
-                InetAddress address = packet.getAddress();
-                int port = packet.getPort();
-                packet = new DatagramPacket(buf, buf.length, address, port);
+                packet = new DatagramPacket(buf, buf.length, address, mcast_port);
                 socket.send(packet);
+                System.out.println("Response sent.");
             } catch (IOException ignored) {
             }
         }

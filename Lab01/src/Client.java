@@ -1,10 +1,12 @@
 import java.io.*;
 import java.net.*;
+import java.lang.Runnable;
+import java.util.concurrent.*;
 
 public class Client {
 
-    private String host_name;
-    private Integer port_number;
+    private String mcast_addr;
+    private Integer mcast_port;
     private String oper;
     private String[] opnd;
 
@@ -18,14 +20,18 @@ public class Client {
         }
         Client client = new Client(args[0], Integer.parseInt(args[1]), args[2], arguments);
 
-        // get a datagram socket
-        DatagramSocket socket = new DatagramSocket();
+        // join Multicast group
+        MulticastSocket socket = new MulticastSocket(client.mcast_port);
+        socket.setTimeToLive(1);
+        InetAddress address = InetAddress.getByName(client.mcast_addr);
+        socket.joinGroup(address);
+        System.out.println("Joined Multicast server - Addr: " + client.mcast_addr + ", Port: " + client.mcast_port);
 
         // send request
         byte[] buf = client.getCommand().getBytes();
-        InetAddress address = InetAddress.getByName(client.host_name);
-        DatagramPacket packet = new DatagramPacket(buf, buf.length, address, client.port_number);
+        DatagramPacket packet = new DatagramPacket(buf, buf.length, address, client.mcast_port);
         socket.send(packet);
+        System.out.println("Sent request");
 
         // get response
         buf = new byte[256];
@@ -34,14 +40,15 @@ public class Client {
 
         // display response
         String received = new String(packet.getData(), 0, packet.getLength());
-        System.out.println("Response: " + received);
+        System.out.println("Received response: " + received);
 
+        socket.leaveGroup(address);
         socket.close();
     }
 
     private Client(String host, Integer port, String operation, String[] arguments){
-        host_name = host;
-        port_number = port;
+        mcast_addr = host;
+        mcast_port = port;
         oper = operation;
         opnd = arguments;
         System.out.print("New Client: "+host+", "+port+", "+operation);
