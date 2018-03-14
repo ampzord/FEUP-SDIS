@@ -6,6 +6,8 @@ import java.util.concurrent.*;
 public class Client {
 
     private String mcast_addr;
+    private InetAddress srvc_address;
+    private Integer srvc_port;
     private static DatagramSocket serviceSocket;
     private Integer mcast_port;
     private String oper;
@@ -28,9 +30,18 @@ public class Client {
         multiSocket.joinGroup(address);
         System.out.println("Joined Multicast server - Addr: " + client.mcast_addr + ", Port: " + client.mcast_port);
 
+        //get Service info
+        byte[] buf = new byte[256];
+        DatagramPacket packet = new DatagramPacket(buf, buf.length, address, client.mcast_port);
+        multiSocket.receive(packet);
+        String broadcast = new String(packet.getData(), 0, packet.getLength());
+        String[] params = broadcast.split(",");
+        client.srvc_address = InetAddress.getByName(params[0]);
+        client.srvc_port = Integer.parseInt(params[1]);
+
         // send request
-        byte[] buf = client.getCommand().getBytes();
-        DatagramPacket packet = new DatagramPacket(buf, buf.length, InetAddress.getLocalHost(), 4445);
+        buf = client.getCommand().getBytes();
+        packet = new DatagramPacket(buf, buf.length, client.srvc_address, client.srvc_port);
         serviceSocket.send(packet);
         System.out.println("Sent request");
 

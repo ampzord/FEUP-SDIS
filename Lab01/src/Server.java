@@ -6,27 +6,30 @@ import java.net.InetAddress;
 
 public class Server extends Thread {
 
-    private Integer srvc_port;
+    private Integer servicePort;
     private MulticastSocket multiSocket;
     private DatagramSocket serviceSocket;
-    private InetAddress address;
-    private Integer mcast_port;
+    private InetAddress multiAddress;
+    private Integer multiPort;
     private String[] plates = new String[256];
     private String[] owners = new String[256];
 
     public static void main(String[] args) throws IOException {
         Server server = new Server(Integer.parseInt(args[0]), args[1], Integer.parseInt(args[2]));
+        ServerBroadcast broadcast = new ServerBroadcast(server.multiAddress, server.multiPort, server.servicePort);
         server.start();
+        broadcast.start();
     }
 
     private Server(int service_port, String multicast_address, int multicast_port) throws IOException {
-        srvc_port = service_port;
-        address = InetAddress.getByName(multicast_address);
-        mcast_port = multicast_port;
-        serviceSocket = new DatagramSocket(srvc_port);
+        servicePort = service_port;
+        multiAddress = InetAddress.getByName(multicast_address);
+        multiPort = multicast_port;
+        serviceSocket = new DatagramSocket(servicePort);
         multiSocket = new MulticastSocket(multicast_port);
+        multiSocket.setSoTimeout(1000);
 
-        System.out.println("Started server: ServPort - "+srvc_port+"MulticastAddr - "+multicast_address+", MulticastPort - "+mcast_port);
+        System.out.println("Started server: ServPort - "+servicePort+"MulticastAddr - "+multicast_address+", MulticastPort - "+multiPort);
     }
 
     @Override
@@ -63,7 +66,7 @@ public class Server extends Thread {
 
                 // send the response to the client at "address" and "port"
                 buf = response.getBytes();
-                packet = new DatagramPacket(buf, buf.length, address, mcast_port);
+                packet = new DatagramPacket(buf, buf.length, multiAddress, multiPort);
                 multiSocket.send(packet);
                 System.out.println("Response sent.");
             } catch (IOException ignored) {
