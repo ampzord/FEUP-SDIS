@@ -93,6 +93,7 @@ public class Server extends Thread{
         }
     }
 
+<<<<<<< HEAD
     private void protocol(String[] request) throws NoSuchAlgorithmException{
         if(request[1].compareTo("BACKUP") == 0){
             String filePath = request[2], fileId = getFileId(filePath), replicationDeg = request[3];
@@ -119,6 +120,8 @@ public class Server extends Thread{
             }
 
 
+=======
+>>>>>>> ccda1b8071d965396736199d6a5b3ca7456be8da
         }
     }
 
