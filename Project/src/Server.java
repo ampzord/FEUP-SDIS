@@ -1,12 +1,18 @@
 import java.io.IOException;
 import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.nio.charset.StandardCharsets;
+import java.security.NoSuchAlgorithmException;
 import java.net.*;
+import java.io.File;
+import java.nio.file.Files;
+import java.util.Arrays;
 
 public class Server extends Thread{
     //ID & Version
     private String ID;
     private String version = "1.0";
-    private String CRLF = 0xD + 0xA;
+    private String CRLF = Integer.toString(0xD) + Integer.toString(0xA);
 
     //Server Channel
     private DatagramSocket SC;
@@ -68,6 +74,7 @@ public class Server extends Thread{
             try {
                 //Retrieve packet from the Control channel
                 byte[] buf = new byte[256];
+
                 DatagramPacket packet = new DatagramPacket(buf, buf.length);
                 SC.receive(packet);
                 String request = new String(buf, 0, buf.length);
@@ -75,22 +82,43 @@ public class Server extends Thread{
                 //Print request
                 System.out.println("Peer: "+ID+" received request - "+request);
                 //Analize request & execute protocol
-                protocol(request.split(" "));
-            }catch (IOException e){
+                try {
+                    protocol(request.split(" "));
+                }catch(NoSuchAlgorithmException e){
+                    System.out.println("NoSuchAlgorithmException caught in Server thread");
+                }
+            }catch(IOException e){
                 System.out.println("IOException caught in Server thread");
             }
         }
     }
 
-    private void protocol(String[] request) {
-        if(request[0].compareTo("BACKUP") == 0){
-            String fileId, chunkNo, replicationDeg;
+    private void protocol(String[] request) throws NoSuchAlgorithmException{
+        if(request[1].compareTo("BACKUP") == 0){
+            String filePath = request[2], fileId = getFileId(filePath), replicationDeg = request[3];
+            File file = new File(filePath);
+            Path path = new Path(filePath);
+            byte[] chunks = Files.readAllBytes(path);
 
             //Broadcast protocol to use
             System.out.println("Peer: "+ID+" starting BACKUP protocol");
 
-            //Prepare HEADER
-            String header = "PUTCHUNK " += version + " " + ID + " " + fileId + " " + chunkNo + " " + replicationDeg + " " + CRLF;
+            //Start sending chunks to the multicast data channel(MDB)
+            int i;
+            for(i = 0; i < file.length()/64000; i++){
+                int chunkNo = i;
+                //Prepare HEADER
+                String header = "PUTCHUNK " + version + " " + ID + " " + fileId + " " + chunkNo + " " + replicationDeg + " " + CRLF + CRLF;
+                //Prepare BODY
+                String body = new String(Arrays.copyOfRange(chunks, i*64000, (i+1)*64000), StandardCharsets.UTF_8);
+                //Create chunk
+                String chunk = header + body;
+
+                DatagramPacket packet = new DatagramPacket(chunk.getBytes();, chunk.length, MDB_address, MDB_port);
+                MDB.send();
+            }
+
+
         }
     }
 
@@ -105,5 +133,30 @@ public class Server extends Thread{
     private static void parseArguments(String[] args) {
     	//INET_ADDR = args[0];
     	//PORT = Integer.parseInt(args[1]);
+    }
+
+    private String getFileId(String fileName) throws NoSuchAlgorithmException {
+        SecureRandom random = new SecureRandom();
+        byte rand[] = new byte[20];
+        random.nextBytes(rand);
+
+        String string = fileName + ID + rand;
+
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] encodedhash = digest.digest(
+                string.getBytes(StandardCharsets.UTF_8));
+
+        return bytesToHex(encodedhash);
+    }
+
+    //Source: http://www.baeldung.com/sha-256-hashing-java
+    private static String bytesToHex(byte[] hash){
+        StringBuffer hexString = new StringBuffer();
+        for (int i = 0; i < hash.length; i++) {
+            String hex = Integer.toHexString(0xff & hash[i]);
+            if(hex.length() == 1) hexString.append('0');
+            hexString.append(hex);
+        }
+        return hexString.toString();
     }
 }
