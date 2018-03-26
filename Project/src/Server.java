@@ -95,7 +95,6 @@ public class Server extends Thread{
         }
     }
 
-<<<<<<< HEAD
     private void protocol(String[] request) throws NoSuchAlgorithmException{
         if(request[1].compareTo("BACKUP") == 0){
             String filePath = request[2], fileId = getFileId(filePath), replicationDeg = request[3];
@@ -121,8 +120,6 @@ public class Server extends Thread{
                 MDB.send();
             }
 
-
-=======
     private void protocol(String[] request) {
     	String fileId, chunkNo, replicationDeg;
     	fileId = "";
@@ -172,7 +169,6 @@ public class Server extends Thread{
         
             //REMOVED <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
             String header = "REMOVED " + version + " " + ID + " " + fileId + " " + chunkNo + " " + CRLF + CRLF;
->>>>>>> ccda1b8071d965396736199d6a5b3ca7456be8da
         }
     }
     
