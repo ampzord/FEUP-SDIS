@@ -1,3 +1,5 @@
+package src;
+
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -121,10 +123,59 @@ public class Server extends Thread{
 
 
 =======
+    private void protocol(String[] request) {
+    	String fileId, chunkNo, replicationDeg;
+    	fileId = "";
+    	chunkNo = "";
+    	
+    	//BACKUP
+        if(request[0].compareTo("BACKUP") == 0){
+            
+            //Broadcast protocol to use
+            System.out.println("Peer: "+ID+" starting BACKUP protocol");
+
+            //Prepare HEADER
+            //String header = "PUTCHUNK " + version + " " + ID + " " + fileId + " " + chunkNo + " " + replicationDeg + " " + CRLF;
+        }
+        
+        //RESTORE
+        else if (request[0].compareTo("RESTORE") == 0) {
+        	
+        	//Broadcast protocol to use
+            System.out.println("Peer: " + ID + " starting RESTORE protocol");
+            
+            // Header for initiator peer
+            // GETCHUNK <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
+            String header = "GETCHUNK " + version + " " + ID + " " + fileId + " " + chunkNo + " " + CRLF + CRLF;
+            
+            //CHUNK <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF><Body>
+            String response = "CHUNK " + version + " " + ID + " " + fileId + " " + chunkNo + " " + CRLF + CRLF;
+            
+            String body;
+        }
+        
+        //DELETE
+        else if (request[0].compareTo("DELETE") == 0) {
+        	
+        	//Broadcast protocol to use
+            System.out.println("Peer: " + ID + " starting DELETE protocol");
+        
+        	//DELETE <Version> <SenderId> <FileId> <CRLF><CRLF>
+            String header = "DELETE " + version + " " + ID + " " + fileId + " " + CRLF + CRLF;
+        }
+        
+        //RECLAIM
+        else if (request[0].compareTo("RECLAIM") == 0) {
+        	
+        	//Broadcast protocol to use
+            System.out.println("Peer: " + ID + " starting DELETE protocol");
+        
+            //REMOVED <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
+            String header = "REMOVED " + version + " " + ID + " " + fileId + " " + chunkNo + " " + CRLF + CRLF;
 >>>>>>> ccda1b8071d965396736199d6a5b3ca7456be8da
         }
     }
-
+    
     private static boolean validArgumentNumber(String[] args) {
     	if (args.length != 3) {
     		System.out.println("multicast: <mcast_addr> <mcast_port>: <srvc_addr> <srvc_port> ");
