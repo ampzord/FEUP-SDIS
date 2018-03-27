@@ -8,6 +8,8 @@ import java.security.NoSuchAlgorithmException;
 import java.net.*;
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 
 public class Server extends Thread{
@@ -95,12 +97,15 @@ public class Server extends Thread{
         }
     }
 
-    private void protocol(String[] request) throws NoSuchAlgorithmException{
+    private void protocol(String[] request) throws NoSuchAlgorithmException, IOException{
+    	int chunkNo = 0;
+    	String filePath = request[2], fileId = getFileId(filePath), replicationDeg = request[3];
+        File file = new File(filePath);
+        Path path = Paths.get(filePath);
+        byte[] chunks = Files.readAllBytes(path);
+    	
         if(request[1].compareTo("BACKUP") == 0){
-            String filePath = request[2], fileId = getFileId(filePath), replicationDeg = request[3];
-            File file = new File(filePath);
-            Path path = new Path(filePath);
-            byte[] chunks = Files.readAllBytes(path);
+            
 
             //Broadcast protocol to use
             System.out.println("Peer: "+ID+" starting BACKUP protocol");
@@ -108,7 +113,7 @@ public class Server extends Thread{
             //Start sending chunks to the multicast data channel(MDB)
             int i;
             for(i = 0; i < file.length()/64000; i++){
-                int chunkNo = i;
+                chunkNo = i;
                 //Prepare HEADER
                 String header = "PUTCHUNK " + version + " " + ID + " " + fileId + " " + chunkNo + " " + replicationDeg + " " + CRLF + CRLF;
                 //Prepare BODY
@@ -116,25 +121,11 @@ public class Server extends Thread{
                 //Create chunk
                 String chunk = header + body;
 
-                DatagramPacket packet = new DatagramPacket(chunk.getBytes();, chunk.length, MDB_address, MDB_port);
-                MDB.send();
+                DatagramPacket packet = new DatagramPacket(chunk.getBytes(), chunk.length(), MDB_address, MDB_port);
+                MDB.send(packet);
             }
-
-    private void protocol(String[] request) {
-    	String fileId, chunkNo, replicationDeg;
-    	fileId = "";
-    	chunkNo = "";
-    	
-    	//BACKUP
-        if(request[0].compareTo("BACKUP") == 0){
-            
-            //Broadcast protocol to use
-            System.out.println("Peer: "+ID+" starting BACKUP protocol");
-
-            //Prepare HEADER
-            //String header = "PUTCHUNK " + version + " " + ID + " " + fileId + " " + chunkNo + " " + replicationDeg + " " + CRLF;
         }
-        
+    	
         //RESTORE
         else if (request[0].compareTo("RESTORE") == 0) {
         	
