@@ -24,7 +24,7 @@ public class TestApp {
         }
         else{
             peer_ap[0] = "172.30.7.42";
-            peer_ap[1] = "4445";
+            peer_ap[1] = "4405";
             request = "TESTE";
         }
 
@@ -44,5 +44,8 @@ public class TestApp {
         socket.receive(packet);
         //Print response
         System.out.println(new String(packet.getData()));
+        
+        socket.close();
+        server.closeAllSockets();
     }
 }

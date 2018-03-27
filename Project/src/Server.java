@@ -10,36 +10,37 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 
 public class Server extends Thread{
     //ID & Version
-    private String ID;
-    private String version = "1.0";
-    private String CRLF = Integer.toString(0xD) + Integer.toString(0xA);
+    protected String ID;
+    protected String version = "1.0";
+    protected String CRLF = Integer.toString(0xD) + Integer.toString(0xA);
 
     //Server Channel
-    private DatagramSocket SC;
-    private InetAddress SC_address;
-    private Integer SC_port;
+    protected DatagramSocket SC;
+    protected InetAddress SC_address;
+    protected Integer SC_port;
 
     //Control Channel
-    private MulticastSocket MC;
-    private InetAddress MC_address;
-    private Integer MC_port;
+    protected MulticastSocket MC;
+    protected InetAddress MC_address;
+    protected Integer MC_port;
 
     //Backup Channel
-    private MulticastSocket MDB;
-    private InetAddress MDB_address;
-    private Integer MDB_port;
+    protected MulticastSocket MDB;
+    protected InetAddress MDB_address;
+    protected Integer MDB_port;
 
     //Restore Channel
-    private MulticastSocket MDR;
-    private InetAddress MDR_address;
-    private Integer MDR_port;
+    protected MulticastSocket MDR;
+    protected InetAddress MDR_address;
+    protected Integer MDR_port;
 
     public Server(String MC_address, Integer MC_port, String MDB_address, Integer MDB_port, String MDR_address, Integer MDR_port) throws IOException, UnknownHostException, IOException{
-        SC_port = 4445;
+        SC_port = 4405;
         SC_address = InetAddress.getLocalHost();
         SC = new DatagramSocket(SC_port);
 
@@ -59,17 +60,6 @@ public class Server extends Thread{
         this.MDR_address = InetAddress.getByName(MDR_address);
         this.MDR_port = MDR_port;
         MDR.joinGroup(this.MDR_address);
-    }
-
-    public static void main(String[] args) throws UnknownHostException, InterruptedException, IOException {
-        //Initialize Peer thread
-        Server server;
-        if(args.length != 0) {
-            server = new Server(args[0], Integer.parseInt(args[1]), args[2], Integer.parseInt(args[3]), args[4], Integer.parseInt(args[5]));
-        }else{
-            server = new Server("224.0.0.2", 8001, "224.0.0.3", 8002, "224.0.0.4", 8003);
-        }
-    	server.start();
     }
 
     @Override
@@ -105,7 +95,6 @@ public class Server extends Thread{
         byte[] chunks = Files.readAllBytes(path);
     	
         if(request[1].compareTo("BACKUP") == 0){
-            
 
             //Broadcast protocol to use
             System.out.println("Peer: "+ID+" starting BACKUP protocol");
@@ -176,12 +165,11 @@ public class Server extends Thread{
     	//PORT = Integer.parseInt(args[1]);
     }
 
-    private String getFileId(String fileName) throws NoSuchAlgorithmException {
-        SecureRandom random = new SecureRandom();
-        byte rand[] = new byte[20];
-        random.nextBytes(rand);
-
-        String string = fileName + ID + rand;
+    protected String getFileId(String fileName) throws NoSuchAlgorithmException, IOException {
+        Path path = Paths.get(fileName);
+        
+        BasicFileAttributes attr = Files.readAttributes(path, BasicFileAttributes.class);
+        String string = fileName + attr.creationTime().toString();
 
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         byte[] encodedhash = digest.digest(
@@ -199,5 +187,12 @@ public class Server extends Thread{
             hexString.append(hex);
         }
         return hexString.toString();
+    }
+    
+    public void closeAllSockets(){
+    	SC.close();
+    	MDB.close();
+    	MC.close();
+    	MDR.close();
     }
 }
