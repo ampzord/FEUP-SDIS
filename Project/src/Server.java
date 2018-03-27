@@ -39,7 +39,7 @@ public class Server extends Thread{
     private Integer MDR_port;
 
     public Server(String MC_address, Integer MC_port, String MDB_address, Integer MDB_port, String MDR_address, Integer MDR_port) throws IOException, UnknownHostException, IOException{
-        SC_port = 4445;
+        SC_port = 4446;
         SC_address = InetAddress.getLocalHost();
         SC = new DatagramSocket(SC_port);
 
@@ -61,16 +61,6 @@ public class Server extends Thread{
         MDR.joinGroup(this.MDR_address);
     }
 
-    public static void main(String[] args) throws UnknownHostException, InterruptedException, IOException {
-        //Initialize Peer thread
-        Server server;
-        if(args.length != 0) {
-            server = new Server(args[0], Integer.parseInt(args[1]), args[2], Integer.parseInt(args[3]), args[4], Integer.parseInt(args[5]));
-        }else{
-            server = new Server("224.0.0.2", 8001, "224.0.0.3", 8002, "224.0.0.4", 8003);
-        }
-    	server.start();
-    }
 
     @Override
     public void run() {
@@ -104,9 +94,9 @@ public class Server extends Thread{
         Path path = Paths.get(filePath);
         byte[] chunks = Files.readAllBytes(path);
     	
+        //BACKUP
         if(request[1].compareTo("BACKUP") == 0){
             
-
             //Broadcast protocol to use
             System.out.println("Peer: "+ID+" starting BACKUP protocol");
 
@@ -124,6 +114,8 @@ public class Server extends Thread{
                 DatagramPacket packet = new DatagramPacket(chunk.getBytes(), chunk.length(), MDB_address, MDB_port);
                 MDB.send(packet);
             }
+            
+            
         }
     	
         //RESTORE
@@ -137,9 +129,10 @@ public class Server extends Thread{
             String header = "GETCHUNK " + version + " " + ID + " " + fileId + " " + chunkNo + " " + CRLF + CRLF;
             
             //CHUNK <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF><Body>
-            String response = "CHUNK " + version + " " + ID + " " + fileId + " " + chunkNo + " " + CRLF + CRLF;
+            //String response = "CHUNK " + version + " " + ID + " " + fileId + " " + chunkNo + " " + CRLF + CRLF;
             
-            String body;
+            
+            
         }
         
         //DELETE
@@ -156,10 +149,13 @@ public class Server extends Thread{
         else if (request[0].compareTo("RECLAIM") == 0) {
         	
         	//Broadcast protocol to use
-            System.out.println("Peer: " + ID + " starting DELETE protocol");
+            System.out.println("Peer: " + ID + " starting RECLAIM protocol");
         
             //REMOVED <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
             String header = "REMOVED " + version + " " + ID + " " + fileId + " " + chunkNo + " " + CRLF + CRLF;
+        }
+        else {
+        	System.out.println("Not valid operation..");
         }
     }
     

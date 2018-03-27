@@ -4,12 +4,14 @@ package src;
 import java.net.*;
 import java.io.IOException;
 
+
 public class TestApp {
 
     public static void main(String[] args) throws SocketException, UnknownHostException, IOException{
         //Start peers
         Server server = new Server("224.0.0.2", 8001, "224.0.0.3", 8002, "224.0.0.4", 8003);
     	server.start();
+    	
 
     	//Start client
         String[] peer_ap = new String[2];
@@ -24,7 +26,7 @@ public class TestApp {
         }
         else{
             peer_ap[0] = "172.30.7.42";
-            peer_ap[1] = "4445";
+            peer_ap[1] = "4446";
             request = "TESTE";
         }
 
@@ -42,6 +44,7 @@ public class TestApp {
         buf = new byte[256];
         packet = new DatagramPacket(buf, buf.length);
         socket.receive(packet);
+
         //Print response
         System.out.println(new String(packet.getData()));
     }
