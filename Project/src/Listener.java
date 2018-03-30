@@ -1,24 +1,20 @@
 package src;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.UnknownHostException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.security.NoSuchAlgorithmException;
-import java.util.Random;
 
-public class Listener extends Server{
+public class Listener extends Thread{
 
-	public Listener(String MC_address, Integer MC_port, String MDB_address, Integer MDB_port, String MDR_address,
-			Integer MDR_port) throws IOException, UnknownHostException, IOException {
-		super(MC_address, MC_port, MDB_address, MDB_port, MDR_address, MDR_port);
-		// TODO Auto-generated constructor stub
-		
+	//ID & Version
+    protected String ID;
+    protected String version = "1.0";
+    protected String CRLF = Integer.toString(0xD) + Integer.toString(0xA);
+	
+	public Listener(String ID) throws IOException {
+		this.ID = ID;
 	}
 	
-	@Override
+}
+	/*@Override
     public void run() {
         while(true) {
             try {
@@ -75,7 +71,7 @@ public class Listener extends Server{
     		DatagramPacket packet = new DatagramPacket(msg.getBytes(), msg.length(), MC_address, MC_port);
             MC.send(packet);
         }
-    	/*
+    	
         //RESTORE
         else if (request[0].compareTo("RESTORE") == 0) {
         	
@@ -110,6 +106,6 @@ public class Listener extends Server{
         
             //REMOVED <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
             String header = "REMOVED " + version + " " + ID + " " + fileId + " " + chunkNo + " " + CRLF + CRLF;
-        }*/
+        }
     }
-}
+}*/

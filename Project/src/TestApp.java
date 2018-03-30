@@ -1,4 +1,3 @@
-
 package src;
 
 import java.net.*;
@@ -9,9 +8,11 @@ public class TestApp {
 
     public static void main(String[] args) throws SocketException, UnknownHostException, IOException{
         //Start peers
-        Server server = new Server("224.0.0.2", 8001, "224.0.0.3", 8002, "224.0.0.4", 8003);
-    	server.start();
+        Server peer1 = new Server(4445, "224.0.0.2", 8001, "224.0.0.3", 8002, "224.0.0.4", 8003);
+    	peer1.start();
     	
+    	Server peer2 = new Server(4455, "224.0.0.2", 8001, "224.0.0.3", 8002, "224.0.0.4", 8003);
+    	peer2.start();
 
     	//Start client
         String[] peer_ap = new String[2];
@@ -25,9 +26,9 @@ public class TestApp {
             }
         }
         else{
-            peer_ap[0] = "172.30.7.42";
-            peer_ap[1] = "4405";
-            request = "TESTE";
+            peer_ap[0] = InetAddress.getLocalHost().getHostName();
+            peer_ap[1] = "4445";
+            request = "BACKUP src/TestFile.txt 1";
         }
 
         int port = Integer.parseInt(peer_ap[1]);
@@ -49,6 +50,6 @@ public class TestApp {
         System.out.println(new String(packet.getData()));
         
         socket.close();
-        server.closeAllSockets();
+        peer1.closeAllSockets();
     }
 }

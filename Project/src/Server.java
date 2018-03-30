@@ -2,7 +2,6 @@ package src;
 
 import java.io.IOException;
 import java.security.MessageDigest;
-import java.security.SecureRandom;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.net.*;
@@ -10,7 +9,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
 
 public class Server extends Thread{
@@ -24,46 +23,62 @@ public class Server extends Thread{
     protected InetAddress SC_address;
     protected Integer SC_port;
 
-    //Control Channel
-    protected MulticastSocket MC;
-    protected InetAddress MC_address;
-    protected Integer MC_port;
-
-    //Backup Channel
-    protected MulticastSocket MDB;
+    //Backup Channel Listener
+    protected BackupListener BL;
+    
+    //Backup Channel Info
+    protected DatagramSocket MDB;
     protected InetAddress MDB_address;
     protected Integer MDB_port;
 
-    //Restore Channel
-    protected MulticastSocket MDR;
+    //Restore Channel Listener
+    protected RestoreListener RL;
+    
+    //Restore Channel Info
+    protected DatagramSocket MDR;
     protected InetAddress MDR_address;
     protected Integer MDR_port;
 
-    public Server(String MC_address, Integer MC_port, String MDB_address, Integer MDB_port, String MDR_address, Integer MDR_port) throws IOException, UnknownHostException, IOException{
-        SC_port = 4405;
+    //Control Channel Listener
+    protected ControlListener CL;
+    
+    //Control Channel Info
+    protected DatagramSocket MC;
+    protected InetAddress MC_address;
+    protected Integer MC_port;
+    
+    public Server(Integer SC_port, String MC_address, Integer MC_port, String MDB_address, Integer MDB_port, String MDR_address, Integer MDR_port) throws IOException, UnknownHostException, IOException{
         SC_address = InetAddress.getLocalHost();
         SC = new DatagramSocket(SC_port);
 
         ID = SC_address + ":" + SC_port;
-
-        MC = new MulticastSocket(MC_port);
-        this.MC_address = InetAddress.getByName(MC_address);
-        this.MC_port = MC_port;
-        MC.joinGroup(this.MC_address);
-
-        MDB = new MulticastSocket(MDB_port);
+        
+        BL = new BackupListener(ID, MC_address, MC_port, MDB_address, MDB_port);
+        BL.start();
+        
         this.MDB_address = InetAddress.getByName(MDB_address);
         this.MDB_port = MDB_port;
-        MDB.joinGroup(this.MDB_address);
-
-        MDR = new MulticastSocket(MDR_port);
+        this.MDB = new DatagramSocket();
+        
+        RL = new RestoreListener(ID, MC_address, MC_port, MDR_address, MDR_port);
+        RL.start();
+        
         this.MDR_address = InetAddress.getByName(MDR_address);
         this.MDR_port = MDR_port;
-        MDR.joinGroup(this.MDR_address);
+        this.MDR = new DatagramSocket();
+        
+        CL = new ControlListener(ID, MC_address, MC_port, this);
+        CL.start();
+        
+        this.MC_address = InetAddress.getByName(MC_address);
+        this.MC_port = MC_port;
+        this.MC = new DatagramSocket();
     }
 
     @Override
     public void run() {
+    	System.out.println("Peer "+ID+": Ready for requests");
+    	
         while(true){
             try {
                 //Retrieve packet from the Control channel
@@ -74,35 +89,43 @@ public class Server extends Thread{
                 String request = new String(buf, 0, buf.length);
                 request = request.trim();
                 //Print request
-                System.out.println("Peer: "+ID+" received request - "+request);
+                System.out.println("Peer "+ID+": received request - "+request);
                 //Analize request & execute protocol
                 try {
                     protocol(request.split(" "));
-                }catch(NoSuchAlgorithmException e){
+                }catch(NoSuchAlgorithmException | InterruptedException e){
                     System.out.println("NoSuchAlgorithmException caught in Server thread");
                 }
             }catch(IOException e){
-                System.out.println("IOException caught in Server thread");
+                System.out.println(e.toString());
             }
         }
     }
 
-    private void protocol(String[] request) throws NoSuchAlgorithmException, IOException{
+    private void protocol(String[] request) throws NoSuchAlgorithmException, IOException, InterruptedException{
+    	if(request.length <= 1) {
+    		System.out.println("Peer "+ID+": Invalid request received");
+    		return;
+    	}
+    		
     	int chunkNo = 0;
-    	String filePath = request[2], fileId = getFileId(filePath), replicationDeg = request[3];
+    	String filePath = request[1], fileId = getFileId(filePath), replicationDeg = request[2];
         File file = new File(filePath);
-        Path path = Paths.get(filePath);
+        Path path = Paths.get(filePath);;
         byte[] chunks = Files.readAllBytes(path);
     	
         //BACKUP
-        if(request[1].compareTo("BACKUP") == 0){
+        if(request[0].compareTo("BACKUP") == 0){
             //Broadcast protocol to use
-            System.out.println("Peer: "+ID+" starting BACKUP protocol");
-
+            System.out.println("Peer "+ID+": starting BACKUP protocol");
+            
+            CL.addFile(fileId);
+            
             //Start sending chunks to the multicast data channel(MDB)
             int i;
-            for(i = 0; i < file.length()/64000; i++){
+            for(i = 0; i <= file.length()/64000; i++){
                 chunkNo = i;
+
                 //Prepare HEADER
                 String header = "PUTCHUNK " + version + " " + ID + " " + fileId + " " + chunkNo + " " + replicationDeg + " " + CRLF + CRLF;
                 //Prepare BODY
@@ -110,13 +133,17 @@ public class Server extends Thread{
                 //Create chunk
                 String chunk = header + body;
 
-                DatagramPacket packet = new DatagramPacket(chunk.getBytes(), chunk.length(), MDB_address, MDB_port);
-                MDB.send(packet);
+                for(int attempt = 1; attempt <= 5; attempt++) {
+	                DatagramPacket packet = new DatagramPacket(chunk.getBytes(), chunk.length(), MDB_address, MDB_port);
+	                MDB.send(packet);
+	                
+	                Thread.sleep(1000);
+	                if(CL.getReplicationDeg(fileId) >= Integer.parseInt(replicationDeg))
+	                	break;
+                }
             }
-            
-            
         }
-    	
+    	/*
         //RESTORE
         else if (request[0].compareTo("RESTORE") == 0) {
         	
@@ -152,30 +179,17 @@ public class Server extends Thread{
         
             //REMOVED <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
             String header = "REMOVED " + version + " " + ID + " " + fileId + " " + chunkNo + " " + CRLF + CRLF;
-        }
+        }*/
         else {
         	System.out.println("Not valid operation..");
         }
     }
     
-    private static boolean validArgumentNumber(String[] args) {
-    	if (args.length != 3) {
-    		System.out.println("multicast: <mcast_addr> <mcast_port>: <srvc_addr> <srvc_port> ");
-    		return false;
-    	}
-    	return true;
-    }
-    
-    private static void parseArguments(String[] args) {
-    	//INET_ADDR = args[0];
-    	//PORT = Integer.parseInt(args[1]);
-    }
-
     protected String getFileId(String fileName) throws NoSuchAlgorithmException, IOException {
         Path path = Paths.get(fileName);
         
-        BasicFileAttributes attr = Files.readAttributes(path, BasicFileAttributes.class);
-        String string = fileName + attr.creationTime().toString();
+        FileTime creationTime = (FileTime)Files.getAttribute(path, "creationTime");
+        String string = fileName + creationTime.toString();
 
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         byte[] encodedhash = digest.digest(
@@ -197,8 +211,8 @@ public class Server extends Thread{
     
     public void closeAllSockets(){
     	SC.close();
-    	MDB.close();
-    	MC.close();
-    	MDR.close();
+    	BL.MDB.close();
+    	BL.MC.close();
+    	RL.MDR.close();
     }
 }
