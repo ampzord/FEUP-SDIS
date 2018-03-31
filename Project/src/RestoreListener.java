@@ -1,10 +1,16 @@
 package src;
 
 import java.io.IOException;
+import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.NoSuchAlgorithmException;
+import java.util.Random;
 
 public class RestoreListener extends Listener{
 
@@ -29,6 +35,64 @@ public class RestoreListener extends Listener{
         this.MDR_address = InetAddress.getByName(MDR_address);
         this.MDR_port = MDR_port;
         MDR.joinGroup(this.MDR_address);
+	}
+	
+	@Override
+    public void run() {
+		System.out.println("Peer " + ID + ": RestoreListener Online!");
+		
+        while(true) {
+            try {
+                //Retrieve packet from the MDB channel
+	            byte[] buf = new byte[256];
+	
+	            DatagramPacket packet = new DatagramPacket(buf, buf.length);
+	            MDR.receive(packet);
+	            String request = new String(buf, 0, buf.length);
+	            request = request.trim();
+	            //Print request if it's from a different peer
+	            if(!request.contains(ID))
+	            	System.out.println("Peer " + ID + ": received request - " + request);
+	            else {
+	            	continue;
+	            }
+	            //Analize request & execute protocol
+	            try {
+                    protocol(request.split(" "));
+                }catch(NoSuchAlgorithmException | InterruptedException e){
+                    System.out.println("NoSuchAlgorithmException caught in Server thread");
+                }
+            }catch(IOException e){
+            	System.out.println("IOException caught in Server thread");
+            }
+	    }
+	}
+	
+	private void protocol(String[] request) throws NoSuchAlgorithmException, IOException, InterruptedException{
+        String version = request[1];
+        String fileId = request[3];
+        int chunkNo = Integer.parseInt(request[4]);
+        if(!request[6].contains(CRLF+CRLF)){
+        	System.out.println("Invalid flags");
+        	return;
+        }
+        
+        if(request[0].compareTo("GETCHUNK") == 0){
+
+            //Broadcast protocol to use
+            System.out.println("Peer " + ID + ": starting GETCHUNK protocol");
+            
+            //ir buscar chunks caminho : src/chunks/fileID/ID ?
+            
+    		
+    		//Broadcast end of protocol
+    		System.out.println("Peer " + ID + ": finished GETCHUNK protocol");
+    		
+    		String msg = "CHUNK " + version + " " + ID + " "  + fileId + " " + chunkNo + " " + CRLF + CRLF ;
+    		
+    		DatagramPacket packet = new DatagramPacket(msg.getBytes(), msg.length(), MDR_address, MDR_port);
+            MDR.send(packet);
+        }
 	}
 
 }

@@ -143,24 +143,27 @@ public class Server extends Thread{
                 }
             }
         }
-    	/*
+    	
         //RESTORE
         else if (request[0].compareTo("RESTORE") == 0) {
         	
         	//Broadcast protocol to use
             System.out.println("Peer: " + ID + " starting RESTORE protocol");
+            System.out.println("File to restore: " + filePath);
             
             // Header for initiator peer
-            // GETCHUNK <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
             String header = "GETCHUNK " + version + " " + ID + " " + fileId + " " + chunkNo + " " + CRLF + CRLF;
             
-            //CHUNK <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF><Body>
-            //String response = "CHUNK " + version + " " + ID + " " + fileId + " " + chunkNo + " " + CRLF + CRLF;
-            
+            for(int attempt = 1; attempt <= 5; attempt++) {
+                DatagramPacket packet = new DatagramPacket(header.getBytes(), header.length(), MC_address, MC_port);
+                MC.send(packet);
+                
+                Thread.sleep(1000);
+            }
             
             
         }
-        
+        /*
         //DELETE
         else if (request[0].compareTo("DELETE") == 0) {
         	
