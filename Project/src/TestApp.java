@@ -6,15 +6,8 @@ import java.io.IOException;
 
 public class TestApp {
 
-    public static void main(String[] args) throws SocketException, UnknownHostException, IOException{
-        //Start peers
-        Server peer1 = new Server(4445, "224.0.0.2", 8001, "224.0.0.3", 8002, "224.0.0.4", 8003);
-    	peer1.start();
-    	
-    	Server peer2 = new Server(4455, "224.0.0.2", 8001, "224.0.0.3", 8002, "224.0.0.4", 8003);
-    	peer2.start();
-
-    	//Start client
+    public static void main(String[] args) throws SocketException, UnknownHostException, IOException, InterruptedException{
+        //Start client
         String[] peer_ap = new String[2];
         String request;
 
@@ -41,15 +34,8 @@ public class TestApp {
         DatagramPacket packet = new DatagramPacket(buf, buf.length, address, port);
         socket.send(packet);
 
-        //Receive response
-        buf = new byte[256];
-        packet = new DatagramPacket(buf, buf.length);
-        socket.receive(packet);
-
-        //Print response
-        System.out.println(new String(packet.getData()));
+        Thread.sleep(1000);
         
         socket.close();
-        peer1.closeAllSockets();
     }
 }

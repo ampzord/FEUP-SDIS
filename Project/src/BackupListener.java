@@ -8,6 +8,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.UnknownHostException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -86,7 +87,8 @@ public class BackupListener extends Listener{
             System.out.println("Peer "+server.ID+": starting PUTCHUNK protocol");
             
             Path filePath = Paths.get("src/Chunks/"+fileId+"/"+chunkNo);
-            Files.write(filePath, body.getBytes());
+            
+        	Files.write(filePath, body.getBytes());
             
     		//Broadcast after random delay
     		Random rand = new Random();

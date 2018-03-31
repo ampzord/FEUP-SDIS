@@ -51,6 +51,15 @@ public class Server extends Thread{
     //Files Backed Up
     protected Hashtable<String,FileInfo> files = new Hashtable<String,FileInfo>();
     
+    public static void main(String[] args) throws SocketException, UnknownHostException, IOException{
+        //Start peers
+        Server peer1 = new Server(4445, "224.0.0.2", 8001, "224.0.0.3", 8002, "224.0.0.4", 8003);
+    	peer1.start();
+    	
+    	Server peer2 = new Server(4455, "224.0.0.2", 8001, "224.0.0.3", 8002, "224.0.0.4", 8003);
+    	peer2.start();
+    }
+    
     public Server(Integer SC_port, String MC_address, Integer MC_port, String MDB_address, Integer MDB_port, String MDR_address, Integer MDR_port) throws IOException, UnknownHostException, IOException{
         SC_address = InetAddress.getLocalHost();
         SC = new DatagramSocket(SC_port);
@@ -113,7 +122,7 @@ public class Server extends Thread{
     	}
     		
     	int chunkNo = 0;
-    	String filePath = "src/"+request[1], fileId = getFileId(filePath), replicationDeg = request[2];
+    	String filePath = "src/"+request[1], fileId = getFileId(filePath), replicationDeg;
         File file = new File(filePath);
         Path path = Paths.get(filePath);
         byte[] chunks = Files.readAllBytes(path);
@@ -123,6 +132,8 @@ public class Server extends Thread{
     	
         //BACKUP
         if(request[0].compareTo("BACKUP") == 0){
+        	replicationDeg = request[2];
+        	
             //Broadcast protocol to use
             System.out.println("Peer "+ID+": starting BACKUP protocol");
             
