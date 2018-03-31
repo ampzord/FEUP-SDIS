@@ -28,7 +28,7 @@ public class TestApp {
         else{
             peer_ap[0] = InetAddress.getLocalHost().getHostName();
             peer_ap[1] = "4445";
-            request = "BACKUP src/TestFile.txt 1";
+            request = "BACKUP TestFile.txt 1";
         }
 
         int port = Integer.parseInt(peer_ap[1]);

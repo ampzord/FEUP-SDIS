@@ -1,5 +1,7 @@
 package src;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -24,7 +26,7 @@ public class BackupListener extends Listener{
     protected InetAddress MC_address;
     protected Integer MC_port;
 	
-	public BackupListener(Server server, String MC_address, Integer MC_port, String MDB_address, Integer MDB_port) throws IOException, UnknownHostException, IOException {
+	public BackupListener(Server server, String MC_address, Integer MC_port, String MDB_address, Integer MDB_port) throws IOException, UnknownHostException {
 		super(server);
 		
 		this.MC_address = InetAddress.getByName(MC_address);
@@ -63,7 +65,7 @@ public class BackupListener extends Listener{
                     System.out.println("NoSuchAlgorithmException caught in Server thread");
                 }
             }catch(IOException e){
-            	System.out.println("IOException caught in Server thread");
+            	System.out.println(e.toString());
             }
 	    }
 	}
@@ -83,9 +85,9 @@ public class BackupListener extends Listener{
             //Broadcast protocol to use
             System.out.println("Peer "+server.ID+": starting PUTCHUNK protocol");
             
-    		Path file = Paths.get("src/Chunks/" + fileId);
-    		Files.write(file, body.getBytes());
-    		
+            Path filePath = Paths.get("src/Chunks/"+fileId+"/"+chunkNo);
+            Files.write(filePath, body.getBytes());
+            
     		//Broadcast after random delay
     		Random rand = new Random();
     		int delay = rand.nextInt(400);

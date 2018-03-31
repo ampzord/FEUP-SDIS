@@ -6,11 +6,8 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.UnknownHostException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
-import java.util.Random;
+import java.util.Hashtable;
 
 public class RestoreListener extends Listener{
 
@@ -24,6 +21,8 @@ public class RestoreListener extends Listener{
     protected InetAddress MC_address;
     protected Integer MC_port;
 	
+    protected Hashtable<Integer,byte[]> chunks;
+    
 	public RestoreListener(Server server, String MC_address, Integer MC_port, String MDR_address, Integer MDR_port) throws IOException, UnknownHostException, IOException {
 		super(server);
 		
@@ -39,11 +38,11 @@ public class RestoreListener extends Listener{
 	
 	@Override
     public void run() {
-		System.out.println("Peer " + ID + ": RestoreListener Online!");
+		System.out.println("Peer " + server.ID + ": RestoreListener Online!");
 		
         while(true) {
             try {
-                //Retrieve packet from the MDB channel
+                //Retrieve packet from the MDR channel
 	            byte[] buf = new byte[256];
 	
 	            DatagramPacket packet = new DatagramPacket(buf, buf.length);
@@ -51,8 +50,8 @@ public class RestoreListener extends Listener{
 	            String request = new String(buf, 0, buf.length);
 	            request = request.trim();
 	            //Print request if it's from a different peer
-	            if(!request.contains(ID))
-	            	System.out.println("Peer " + ID + ": received request - " + request);
+	            if(server.files.get(request.split(" ")[3]) != null)
+	            	System.out.println("Peer " + server.ID + ": received request - " + request);
 	            else {
 	            	continue;
 	            }
@@ -69,65 +68,25 @@ public class RestoreListener extends Listener{
 	}
 	
 	private void protocol(String[] request) throws NoSuchAlgorithmException, IOException, InterruptedException{
-        String version = request[1];
-        String fileId = request[3];
+        String operation = request[0];
+        String data = request[6];
         int chunkNo = Integer.parseInt(request[4]);
-        if(!request[6].contains(CRLF+CRLF)){
-        	System.out.println("Invalid flags");
+        if(!data.contains(server.CRLF+server.CRLF)){
+        	System.out.println("	Invalid flags");
         	return;
         }
         
-        if(request[0].compareTo("GETCHUNK") == 0){
-
+        if(operation.compareTo("CHUNK") == 0){
             //Broadcast protocol to use
-            System.out.println("Peer " + ID + ": starting GETCHUNK protocol");
+            System.out.println("Peer " + server.ID + ": starting CHUNK protocol");
             
-            //ir buscar chunks caminho : src/chunks/fileID/ID ?
-            
-    		
-    		//Broadcast end of protocol
-    		System.out.println("Peer " + ID + ": finished GETCHUNK protocol");
-    		
-    		String msg = "CHUNK " + version + " " + ID + " "  + fileId + " " + chunkNo + " " + CRLF + CRLF ;
-    		
-    		DatagramPacket packet = new DatagramPacket(msg.getBytes(), msg.length(), MDR_address, MDR_port);
-            MDR.send(packet);
+            //Add chunk to Hashtable if it hasn't already
+            String body = data.substring(8);
+            if(chunks.get(chunkNo) != null)
+            	chunks.put(chunkNo, body.getBytes());
+            //When duplicate chunk is received, ignore it
+            else
+            	return;
         }
-	}
-
-	@Override
-    public void run() {
-		System.out.println("Peer "+server.ID+": ControlListener Online!");
-		
-        while(true) {
-            try {
-                //Retrieve packet from the MDR channel
-	            byte[] buf = new byte[256];
-	
-	            DatagramPacket packet = new DatagramPacket(buf, buf.length);
-	            MDR.receive(packet);
-	            String request = new String(buf, 0, buf.length);
-	            request = request.trim();
-	            //Print request & continue IF fileId is in this peer's system
-	            if(server.files.get(request.split(" ")[3]) != null) {
-	            	System.out.println("Peer "+server.ID+": received request - "+request);
-	            }
-	            else {
-	            	continue;
-	            }
-	            protocol(request.split(" "));
-            }catch(IOException e){
-            	System.out.println("IOException caught in Server thread");
-            }
-	    }
-	}
-
-	private void protocol(String[] request) throws IOException {
-		String operation = request[0];
-		if(operation.compareTo("STORED") == 0) {
-			String fileId = request[3];
-			Integer replicationDeg = server.files.get(fileId).getReplicationDeg();
-            server.files.get(fileId).setReplicationDeg(replicationDeg+1);
-		}
 	}
 }

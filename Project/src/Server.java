@@ -71,7 +71,7 @@ public class Server extends Thread{
         this.MDR_port = MDR_port;
         this.MDR = new DatagramSocket();
         
-        CL = new ControlListener(this, MC_address, MC_port);
+        CL = new ControlListener(this, MC_address, MC_port, MDR_address, MDR_port);
         CL.start();
         
         this.MC_address = InetAddress.getByName(MC_address);
@@ -113,9 +113,9 @@ public class Server extends Thread{
     	}
     		
     	int chunkNo = 0;
-    	String filePath = request[1], fileId = getFileId(filePath), replicationDeg = request[2];
+    	String filePath = "src/"+request[1], fileId = getFileId(filePath), replicationDeg = request[2];
         File file = new File(filePath);
-        Path path = Paths.get(filePath);;
+        Path path = Paths.get(filePath);
         byte[] chunks = Files.readAllBytes(path);
         double Nchunks = file.length()/64000.0;
         if(Nchunks-(int)Nchunks > 0)
@@ -127,6 +127,7 @@ public class Server extends Thread{
             System.out.println("Peer "+ID+": starting BACKUP protocol");
             
             //Add file to the list of backed up files
+            Files.createDirectory(Paths.get("src/Chunks/"+fileId));
             files.put(fileId, new FileInfo(filePath, (int)Nchunks, chunkNo));
             //Start sending chunks to the multicast data channel(MDB)
             int i;
@@ -150,28 +151,27 @@ public class Server extends Thread{
                 }
             }
         }
-<<<<<<< HEAD
-=======
-    	
->>>>>>> f02cb4fa97890530aed9781d2e91790e75db71d7
         //RESTORE
         else if (request[0].compareTo("RESTORE") == 0) {
-        	
         	//Broadcast protocol to use
             System.out.println("Peer: " + ID + " starting RESTORE protocol");
-            System.out.println("File to restore: " + filePath);
             
-            // Header for initiator peer
-            String header = "GETCHUNK " + version + " " + ID + " " + fileId + " " + chunkNo + " " + CRLF + CRLF;
-            
-            for(int attempt = 1; attempt <= 5; attempt++) {
-                DatagramPacket packet = new DatagramPacket(header.getBytes(), header.length(), MC_address, MC_port);
-                MC.send(packet);
+            for(int i = 0; i < files.get(fileId).getNchunks(); i++) {
+            	// Header for initiator peer
+                String header = "GETCHUNK " + version + " " + ID + " " + fileId + " " + i + " " + CRLF + CRLF;
                 
-                Thread.sleep(1000);
+	            for(int attempt = 1; attempt <= 5; attempt++) {
+	                DatagramPacket packet = new DatagramPacket(header.getBytes(), header.length(), MC_address, MC_port);
+	                MC.send(packet);
+	                
+	                Thread.sleep(1000);
+	                
+	                if(RL.chunks.get(chunkNo) != null) {
+	                	Files.write(path, RL.chunks.get(chunkNo));
+	                	break;
+	                }
+	            }    
             }
-            
-            
         }
         /*
         //DELETE
