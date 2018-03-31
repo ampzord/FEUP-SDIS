@@ -83,7 +83,7 @@ public class BackupListener extends Listener{
             //Broadcast protocol to use
             System.out.println("Peer "+server.ID+": starting PUTCHUNK protocol");
             
-    		Path file = Paths.get("src/Chunks/"+fileId);
+    		Path file = Paths.get("src/Chunks/" + fileId);
     		Files.write(file, body.getBytes());
     		
     		//Broadcast after random delay
