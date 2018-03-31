@@ -24,8 +24,8 @@ public class BackupListener extends Listener{
     protected InetAddress MC_address;
     protected Integer MC_port;
 	
-	public BackupListener(String ID, String MC_address, Integer MC_port, String MDB_address, Integer MDB_port) throws IOException, UnknownHostException, IOException {
-		super(ID);
+	public BackupListener(Server server, String MC_address, Integer MC_port, String MDB_address, Integer MDB_port) throws IOException, UnknownHostException, IOException {
+		super(server);
 		
 		this.MC_address = InetAddress.getByName(MC_address);
 		this.MC_port = MC_port;
@@ -39,7 +39,7 @@ public class BackupListener extends Listener{
 
 	@Override
     public void run() {
-		System.out.println("Peer "+ID+": BackupListener Online!");
+		System.out.println("Peer "+server.ID+": BackupListener Online!");
 		
         while(true) {
             try {
@@ -51,8 +51,8 @@ public class BackupListener extends Listener{
 	            String request = new String(buf, 0, buf.length);
 	            request = request.trim();
 	            //Print request if it's from a different peer
-	            if(!request.contains(ID))
-	            	System.out.println("Peer "+ID+": received request - "+request);
+	            if(!request.contains(server.ID))
+	            	System.out.println("Peer "+server.ID+": received request - "+request);
 	            else {
 	            	continue;
 	            }
@@ -72,7 +72,7 @@ public class BackupListener extends Listener{
         String version = request[1];
         String fileId = request[3];
         int chunkNo = Integer.parseInt(request[4]);
-        if(!request[6].contains(CRLF+CRLF)){
+        if(!request[6].contains(server.CRLF+server.CRLF)){
         	System.out.println("Invalid flags");
         	return;
         }
@@ -81,7 +81,7 @@ public class BackupListener extends Listener{
         if(request[0].compareTo("PUTCHUNK") == 0){
 
             //Broadcast protocol to use
-            System.out.println("Peer "+ID+": starting PUTCHUNK protocol");
+            System.out.println("Peer "+server.ID+": starting PUTCHUNK protocol");
             
     		Path file = Paths.get("src/Chunks/"+fileId);
     		Files.write(file, body.getBytes());
@@ -92,9 +92,9 @@ public class BackupListener extends Listener{
     		Thread.sleep(delay);
     		
     		//Broadcast end of protocol
-    		System.out.println("Peer "+ID+": finished PUTCHUNK protocol");
+    		System.out.println("Peer "+server.ID+": finished PUTCHUNK protocol");
     		
-    		String msg = "STORED "+version+" "+ID+" "+fileId+" "+chunkNo+" "+CRLF+CRLF;
+    		String msg = "STORED "+version+" "+server.ID+" "+fileId+" "+chunkNo+" "+server.CRLF+server.CRLF;
     		
     		DatagramPacket packet = new DatagramPacket(msg.getBytes(), msg.length(), MC_address, MC_port);
             MC.send(packet);

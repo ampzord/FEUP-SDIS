@@ -4,13 +4,11 @@ import java.io.IOException;
 
 public class Listener extends Thread{
 
-	//ID & Version
-    protected String ID;
-    protected String version = "1.0";
-    protected String CRLF = Integer.toString(0xD) + Integer.toString(0xA);
+	//Server
+	protected Server server;
 	
-	public Listener(String ID) throws IOException {
-		this.ID = ID;
+	public Listener(Server server) throws IOException {
+		this.server = server;
 	}
 	
 }

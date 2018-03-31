@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
+import java.util.Hashtable;
 
 public class Server extends Thread{
     //ID & Version
@@ -47,27 +48,30 @@ public class Server extends Thread{
     protected InetAddress MC_address;
     protected Integer MC_port;
     
+    //Files Backed Up
+    protected Hashtable<String,FileInfo> files = new Hashtable<String,FileInfo>();
+    
     public Server(Integer SC_port, String MC_address, Integer MC_port, String MDB_address, Integer MDB_port, String MDR_address, Integer MDR_port) throws IOException, UnknownHostException, IOException{
         SC_address = InetAddress.getLocalHost();
         SC = new DatagramSocket(SC_port);
 
         ID = SC_address + ":" + SC_port;
         
-        BL = new BackupListener(ID, MC_address, MC_port, MDB_address, MDB_port);
+        BL = new BackupListener(this, MC_address, MC_port, MDB_address, MDB_port);
         BL.start();
         
         this.MDB_address = InetAddress.getByName(MDB_address);
         this.MDB_port = MDB_port;
         this.MDB = new DatagramSocket();
         
-        RL = new RestoreListener(ID, MC_address, MC_port, MDR_address, MDR_port);
+        RL = new RestoreListener(this, MC_address, MC_port, MDR_address, MDR_port);
         RL.start();
         
         this.MDR_address = InetAddress.getByName(MDR_address);
         this.MDR_port = MDR_port;
         this.MDR = new DatagramSocket();
         
-        CL = new ControlListener(ID, MC_address, MC_port, this);
+        CL = new ControlListener(this, MC_address, MC_port);
         CL.start();
         
         this.MC_address = InetAddress.getByName(MC_address);
@@ -113,17 +117,20 @@ public class Server extends Thread{
         File file = new File(filePath);
         Path path = Paths.get(filePath);;
         byte[] chunks = Files.readAllBytes(path);
+        double Nchunks = file.length()/64000.0;
+        if(Nchunks-(int)Nchunks > 0)
+        	Nchunks++;
     	
         //BACKUP
         if(request[0].compareTo("BACKUP") == 0){
             //Broadcast protocol to use
             System.out.println("Peer "+ID+": starting BACKUP protocol");
             
-            CL.addFile(fileId);
-            
+            //Add file to the list of backed up files
+            files.put(fileId, new FileInfo(filePath, (int)Nchunks, chunkNo));
             //Start sending chunks to the multicast data channel(MDB)
             int i;
-            for(i = 0; i <= file.length()/64000; i++){
+            for(i = 0; i < (int)Nchunks; i++){
                 chunkNo = i;
 
                 //Prepare HEADER
@@ -138,12 +145,11 @@ public class Server extends Thread{
 	                MDB.send(packet);
 	                
 	                Thread.sleep(1000);
-	                if(CL.getReplicationDeg(fileId) >= Integer.parseInt(replicationDeg))
+	                if(files.get(fileId).getReplicationDeg() >= Integer.parseInt(replicationDeg))
 	                	break;
                 }
             }
         }
-    	/*
         //RESTORE
         else if (request[0].compareTo("RESTORE") == 0) {
         	
@@ -160,7 +166,7 @@ public class Server extends Thread{
             
             
         }
-        
+        /*
         //DELETE
         else if (request[0].compareTo("DELETE") == 0) {
         	
