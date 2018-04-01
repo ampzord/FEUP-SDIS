@@ -117,43 +117,8 @@ public class Server extends Thread{
 
     private void protocol(String[] request) throws NoSuchAlgorithmException, IOException, InterruptedException{
 		
-    	if (request[0].compareTo("STATE") == 0) {
-		        	
-		        	//Broadcast protocol to use
-		            System.out.println("Peer: " + ID + " starting STATE protocol");
-		            
-		            
-		            /*	For each file whose backup it has initiated:
-				            The file pathname
-				            The backup service id of the file
-				            The desired replication degree
-				            For each chunk of the file:
-				            Its id
-				            Its perceived replication degree
-		            For each chunk it stores:
-						Its id
-						Its size (in KBytes)
-						Its perceived replication degree
-						The peer's storage capacity, i.e. the maximum amount of disk space that can be used to store chunks, 
-						and the amount of storage (both in KBytes) used to backup the chunks.
-					*/
-		            
-		            String currentDir = "./src/Chunks";
-		            
-		            //get all folders created in the directory Chunks
-		            File directory = new File(currentDir);
-		            File[] fList = directory.listFiles();
-		            for (File file : fList){
-		                if (file.isDirectory()){
-		                    System.out.println(file.getName());
-		                }
-		            }
-		            
-		            
-		            
-		}
-    	
-   
+    	if (isProtocol(request)) {
+
     		int chunkNo = 0;
         	String filePath = "src/"+request[1], fileId = getFileId(filePath), replicationDeg;
             File file = new File(filePath);
@@ -259,7 +224,49 @@ public class Server extends Thread{
             	return;
             }
     	
-        
+    	}
+    	
+    	else if (request[0].compareTo("STATE") == 0) {
+		        	
+		        	//Broadcast protocol to use
+		            System.out.println("Peer: " + ID + " starting STATE protocol");
+		            
+		            
+		            /*	For each file whose backup it has initiated:
+				            The file pathname
+				            The backup service id of the file
+				            The desired replication degree
+				            For each chunk of the file:
+				            Its id
+				            Its perceived replication degree
+		            For each chunk it stores:
+						Its id
+						Its size (in KBytes)
+						Its perceived replication degree
+						The peer's storage capacity, i.e. the maximum amount of disk space that can be used to store chunks, 
+						and the amount of storage (both in KBytes) used to backup the chunks.
+					*/
+		            /*
+		            String currentDir = "./src/Chunks";
+		            
+		            //get all folders created in the directory Chunks
+		            File directory = new File(currentDir);
+		            File[] fList = directory.listFiles();
+		            for (File file : fList){
+		                if (file.isDirectory()){
+		                    System.out.println(file.getName());
+		                }
+		            }*/
+		            
+		            
+		            
+		            
+		            
+		}
+    	
+    	else 
+    		System.out.println("Not Valid Operation..");
+    
         
     }
     
