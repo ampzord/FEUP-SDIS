@@ -184,15 +184,29 @@ public class Server extends Thread{
 	            }    
             }
         }
-        /*
+        
         //DELETE
         else if (request[0].compareTo("DELETE") == 0) {
         	
         	//Broadcast protocol to use
             System.out.println("Peer: " + ID + " starting DELETE protocol");
-        
-        	//DELETE <Version> <SenderId> <FileId> <CRLF><CRLF>
-            String header = "DELETE " + version + " " + ID + " " + fileId + " " + CRLF + CRLF;
+            
+            for(int i = 0; i < files.get(fileId).getNchunks(); i++) {
+            	// Header for initiator peer
+            	String header = "DELETE " + version + " " + ID + " " + fileId + " " + CRLF + CRLF;
+                
+	            for(int attempt = 1; attempt <= 5; attempt++) {
+	                DatagramPacket packet = new DatagramPacket(header.getBytes(), header.length(), MC_address, MC_port);
+	                MC.send(packet);
+	                
+	                Thread.sleep(1000);
+	                
+	                if(RL.chunks.get(chunkNo) != null) {
+	                	Files.write(path, RL.chunks.get(chunkNo));
+	                	break;
+	                }
+	            }    
+            }
         }
         
         //RECLAIM
@@ -201,9 +215,11 @@ public class Server extends Thread{
         	//Broadcast protocol to use
             System.out.println("Peer: " + ID + " starting RECLAIM protocol");
         
-            //REMOVED <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
             String header = "REMOVED " + version + " " + ID + " " + fileId + " " + chunkNo + " " + CRLF + CRLF;
-        }*/
+            
+            DatagramPacket packet = new DatagramPacket(header.getBytes(), header.length(), MC_address, MC_port);
+            MC.send(packet);
+        }
         else {
         	System.out.println("Not valid operation..");
         }

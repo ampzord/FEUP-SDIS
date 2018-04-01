@@ -1,10 +1,12 @@
 package src;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -95,6 +97,15 @@ public class ControlListener extends Listener {
             
             //Broadcast end of protocol
     		System.out.println("Peer "+server.ID+": finished GETCHUNK protocol");
+		}
+		else if (operation.compareTo("DELETE") == 0) {
+			
+			// src/chunks/fileId/number
+			String string_path = "src/chunks/" + fileId + "/" + chunkNo;
+			
+			Path path = FileSystems.getDefault().getPath(string_path);
+	        Files.delete(path);
+			
 		}
 	}
 }
