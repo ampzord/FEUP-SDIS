@@ -1,11 +1,11 @@
 package src;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.nio.charset.Charset;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,7 +48,7 @@ public class ControlListener extends Listener {
 	
 	            DatagramPacket packet = new DatagramPacket(buf, buf.length);
 	            MC.receive(packet);
-	            String request = new String(buf, 0, buf.length);
+	            String request = new String(buf, 0, buf.length, Charset.forName("ISO_8859_1"));
 	            request = request.trim();
 	            //Print request & continue IF fileId is in this peer's system
 	            if(server.files.get(request.split(" ")[3]) != null) {
@@ -92,7 +92,7 @@ public class ControlListener extends Listener {
     		
     		String msg = "CHUNK "+version+" "+server.ID+" "+fileId+" "+chunkNo+" "+server.CRLF+server.CRLF+chunk;
     		
-    		DatagramPacket packet = new DatagramPacket(msg.getBytes(), msg.length(), MC_address, MC_port);
+    		DatagramPacket packet = new DatagramPacket(msg.getBytes(Charset.forName("ISO_8859_1")), msg.length(), MDR_address, MDR_port);
             MDR.send(packet);
             
             //Broadcast end of protocol

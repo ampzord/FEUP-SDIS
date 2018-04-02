@@ -8,10 +8,13 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.UnknownHostException;
+import java.nio.charset.Charset;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.security.NoSuchAlgorithmException;
 import java.util.Random;
 
@@ -51,7 +54,7 @@ public class BackupListener extends Listener{
 	
 	            DatagramPacket packet = new DatagramPacket(buf, buf.length);
 	            MDB.receive(packet);
-	            String request = new String(buf, 0, buf.length);
+	            String request = new String(buf, 0, buf.length, Charset.forName("ISO_8859_1"));
 	            request = request.trim();
 	            //Print request if it's from a different peer
 	            if(!request.contains(server.ID))
@@ -79,7 +82,7 @@ public class BackupListener extends Listener{
         	System.out.println("Invalid flags");
         	return;
         }
-        String body = request[6].substring(4);
+        String body = request[6].substring(8);
         
         if(request[0].compareTo("PUTCHUNK") == 0){
 
@@ -88,9 +91,9 @@ public class BackupListener extends Listener{
             
             Path filePath = Paths.get("src/Chunks/"+fileId+"/"+chunkNo);
             
-        	Files.write(filePath, body.getBytes());
+            Files.write(filePath, body.getBytes());
             
-    		//Broadcast after random delay
+            //Broadcast after random delay
     		Random rand = new Random();
     		int delay = rand.nextInt(400);
     		Thread.sleep(delay);
@@ -100,7 +103,7 @@ public class BackupListener extends Listener{
     		
     		String msg = "STORED "+version+" "+server.ID+" "+fileId+" "+chunkNo+" "+server.CRLF+server.CRLF;
     		
-    		DatagramPacket packet = new DatagramPacket(msg.getBytes(), msg.length(), MC_address, MC_port);
+    		DatagramPacket packet = new DatagramPacket(msg.getBytes(Charset.forName("ISO_8859_1")), msg.length(), MC_address, MC_port);
             MC.send(packet);
         }
 	}

@@ -2,6 +2,7 @@ package src;
 
 import java.io.IOException;
 import java.security.MessageDigest;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.net.*;
@@ -10,10 +11,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
+import java.util.List;
 
 public class Server extends Thread{
+	//Extra Info
+	Path filesPath = Paths.get("src/Files");
+	
     //ID & Version
     protected String ID;
     protected String version = "1.0";
@@ -99,7 +105,7 @@ public class Server extends Thread{
 
                 DatagramPacket packet = new DatagramPacket(buf, buf.length);
                 SC.receive(packet);
-                String request = new String(buf, 0, buf.length);
+                String request = new String(buf, 0, buf.length, Charset.forName("ISO_8859_1"));
                 request = request.trim();
                 //Print request
                 System.out.println("Peer "+ID+": received request - "+request);
@@ -116,30 +122,33 @@ public class Server extends Thread{
     }
 
     private void protocol(String[] request) throws NoSuchAlgorithmException, IOException, InterruptedException{
-    	if(request.length <= 1) {
-    		System.out.println("Peer "+ID+": Invalid request received");
-    		return;
-    	}
-    		
-    	int chunkNo = 0;
-    	String filePath = "src/"+request[1], fileId = getFileId(filePath), replicationDeg;
-        File file = new File(filePath);
-        Path path = Paths.get(filePath);
-        byte[] chunks = Files.readAllBytes(path);
-        double Nchunks = file.length()/64000.0;
-        if(Nchunks-(int)Nchunks > 0)
-        	Nchunks++;
     	
-        //BACKUP
+    	//BACKUP
         if(request[0].compareTo("BACKUP") == 0){
-        	replicationDeg = request[2];
+        	int replicationDeg = Integer.parseInt(request[2]);
+        	int chunkNo = 0;
+        	String filePath = "src/"+request[1];
+            File file = new File(filePath);
+            Path path = Paths.get(filePath);
+            byte[] chunks = Files.readAllBytes(path);
+            double Nchunks = file.length()/64000.0;
+            if(Nchunks-(int)Nchunks > 0)
+            	Nchunks++;
+            filePath = filesPath.toAbsolutePath().toString()+"\\"+request[1];
         	
             //Broadcast protocol to use
             System.out.println("Peer "+ID+": starting BACKUP protocol");
             
+            //Create copy in dedicated Files folder
+            Files.createDirectories(filesPath);
+            Files.write(Paths.get(filePath), chunks);
+            
+            String fileId = getFileId(filePath);
+            
             //Add file to the list of backed up files
-            Files.createDirectory(Paths.get("src/Chunks/"+fileId));
+            Files.createDirectories(Paths.get("src/Chunks/"+fileId));
             files.put(fileId, new FileInfo(filePath, (int)Nchunks, chunkNo));
+            
             //Start sending chunks to the multicast data channel(MDB)
             int i;
             for(i = 0; i < (int)Nchunks; i++){
@@ -148,22 +157,27 @@ public class Server extends Thread{
                 //Prepare HEADER
                 String header = "PUTCHUNK " + version + " " + ID + " " + fileId + " " + chunkNo + " " + replicationDeg + " " + CRLF + CRLF;
                 //Prepare BODY
-                String body = new String(Arrays.copyOfRange(chunks, i*64000, (i+1)*64000), StandardCharsets.UTF_8);
+                String body = new String(Arrays.copyOfRange(chunks, i*64000, (i+1)*64000), Charset.forName("ISO_8859_1"));
                 //Create chunk
                 String chunk = header + body;
 
                 for(int attempt = 1; attempt <= 5; attempt++) {
-	                DatagramPacket packet = new DatagramPacket(chunk.getBytes(), chunk.length(), MDB_address, MDB_port);
+	                DatagramPacket packet = new DatagramPacket(chunk.getBytes(Charset.forName("ISO_8859_1")), chunk.length(), MDB_address, MDB_port);
 	                MDB.send(packet);
 	                
 	                Thread.sleep(1000);
-	                if(files.get(fileId).getReplicationDeg() >= Integer.parseInt(replicationDeg))
+	                if(files.get(fileId).getReplicationDeg() >= replicationDeg)
 	                	break;
                 }
             }
         }
         //RESTORE
         else if (request[0].compareTo("RESTORE") == 0) {
+        	String filePath = filesPath.toAbsolutePath().toString()+"\\"+request[1], fileId = getFileId(filePath);
+        	System.out.println("teste");
+        	Path path = Paths.get("src/"+request[1]);
+        	int chunkNo;
+        	
         	//Broadcast protocol to use
             System.out.println("Peer: " + ID + " starting RESTORE protocol");
             
@@ -171,27 +185,34 @@ public class Server extends Thread{
             	// Header for initiator peer
                 String header = "GETCHUNK " + version + " " + ID + " " + fileId + " " + i + " " + CRLF + CRLF;
                 
-	            for(int attempt = 1; attempt <= 5; attempt++) {
-	                DatagramPacket packet = new DatagramPacket(header.getBytes(), header.length(), MC_address, MC_port);
+	            for(int attempt = 0; attempt < 5; attempt++) {
+	            	chunkNo = i;
+	                DatagramPacket packet = new DatagramPacket(header.getBytes(Charset.forName("ISO_8859_1")), header.length(), MC_address, MC_port);
 	                MC.send(packet);
 	                
 	                Thread.sleep(1000);
 	                
-	                if(RL.chunks.get(chunkNo) != null) {
-	                	Files.write(path, RL.chunks.get(chunkNo));
+	                if(RL.getChunks().get(chunkNo) != null) {
+	                	Files.write(path, RL.getChunks().get(chunkNo));
 	                	break;
 	                }
 	            }    
             }
+            //Broadcast end of protocol
+    		System.out.println("Peer "+ID+": finished RESTORE protocol");
         }
         
         //DELETE
         else if (request[0].compareTo("DELETE") == 0) {
+        	String filePath = "src/"+request[1], fileId = getFileId(filePath);
+        	Path path = Paths.get(filePath);
+        	int chunkNo;
         	
         	//Broadcast protocol to use
             System.out.println("Peer: " + ID + " starting DELETE protocol");
             
             for(int i = 0; i < files.get(fileId).getNchunks(); i++) {
+            	chunkNo = i;
             	// Header for initiator peer
             	String header = "DELETE " + version + " " + ID + " " + fileId + " " + CRLF + CRLF;
                 
@@ -201,16 +222,70 @@ public class Server extends Thread{
 	                
 	                Thread.sleep(1000);
 	                
-	                if(RL.chunks.get(chunkNo) != null) {
-	                	Files.write(path, RL.chunks.get(chunkNo));
+	                if(RL.getChunks().get(chunkNo) != null) {
+	                	Files.write(path, new String(RL.getChunks().get(chunkNo), Charset.forName("ISO_8859_1")).getBytes());
 	                	break;
 	                }
 	            }    
             }
         }
-        
+        else if (request[0].compareTo("STATE") == 0) {
+        	
+        	//Broadcast protocol to use
+            System.out.println("Peer: " + ID + " starting STATE protocol");
+            
+            
+            /*	For each file whose backup it has initiated:
+		            The file pathname
+		            The backup service id of the file
+		            The desired replication degree
+		            
+		            For each chunk of the file:
+		            Its id
+		            Its perceived replication degree
+		            
+            For each chunk it stores:
+				Its id
+				Its size (in KBytes)
+				Its perceived replication degree
+				The peer's storage capacity, i.e. the maximum amount of disk space that can be used to store chunks, 
+				and the amount of storage (both in KBytes) used to backup the chunks.
+			*/
+            
+            List<String> listOfBackedUpFiles = new ArrayList<String>();
+            String currentDir = "src/Chunks";
+            
+            //get all folders created in the directory Chunks
+            File directory = new File(currentDir);
+            File[] fList = directory.listFiles();
+            for (File file : fList){
+                if (file.isDirectory()){
+                	listOfBackedUpFiles.add(file.getName());
+                }
+            }
+            System.out.println("Current Backed Up Files:");
+            
+            for (int i = 0; i < listOfBackedUpFiles.size(); i++) {   	
+    			if (files.containsKey(listOfBackedUpFiles.get(i))) {
+    				//Display information about backed up files
+    				FileInfo fileInformation = files.get(listOfBackedUpFiles.get(i));
+    				System.out.println("File path : " + fileInformation.getPath());
+    				System.out.println("File ID : " + listOfBackedUpFiles.get(i));
+    				System.out.println("Replication Degree : " + fileInformation.getReplicationDeg());
+    				
+    				System.out.println("Chunk of the file: ");
+    				System.out.println("ID of chunk: " );
+    				//System.out.println("Replication Degree of Chunk: " + replicationDeg);
+    			}
+            }
+
+        }
+        /*
         //RECLAIM
         else if (request[0].compareTo("RECLAIM") == 0) {
+        	String filePath = "src/"+request[1], fileId = getFileId(filePath);
+        	Path path = Paths.get(filePath);
+        	int chunkNo;
         	
         	//Broadcast protocol to use
             System.out.println("Peer: " + ID + " starting RECLAIM protocol");
@@ -219,7 +294,7 @@ public class Server extends Thread{
             
             DatagramPacket packet = new DatagramPacket(header.getBytes(), header.length(), MC_address, MC_port);
             MC.send(packet);
-        }
+        }*/
         else {
         	System.out.println("Not valid operation..");
         }
@@ -228,7 +303,7 @@ public class Server extends Thread{
     protected String getFileId(String fileName) throws NoSuchAlgorithmException, IOException {
         Path path = Paths.get(fileName);
         
-        FileTime creationTime = (FileTime)Files.getAttribute(path, "creationTime");
+        FileTime creationTime = (FileTime)Files.getAttribute(path, "lastModifiedTime");
         String string = fileName + creationTime.toString();
 
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
