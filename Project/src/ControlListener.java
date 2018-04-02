@@ -95,7 +95,7 @@ public class ControlListener extends Listener {
 	    		int delay = rand.nextInt(400);
 	    		Thread.sleep(delay);
 	    		
-	    		String msg = "CHUNK "+version+" "+server.ID+" "+fileId+" "+chunkNo+" "+server.CRLF+server.CRLF+new String(chunk, StandardCharsets.ISO_8859_1);
+	    		String msg = "CHUNK "+version+" "+server.ID+" "+fileId+" "+chunkNo+" "+server.CRLF+server.CRLF+new String(chunk, StandardCharsets.ISO_8859_1)+server.CRLF;
 	    		
 	    		DatagramPacket packet = new DatagramPacket(msg.getBytes(StandardCharsets.ISO_8859_1), msg.length(), MDR_address, MDR_port);
 	            MDR.send(packet);

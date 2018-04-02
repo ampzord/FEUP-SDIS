@@ -49,8 +49,11 @@ public class BackupListener extends Listener{
 	
 	            DatagramPacket packet = new DatagramPacket(buf, buf.length);
 	            MDB.receive(packet);
-	            String request = new String(buf, 0, buf.length, StandardCharsets.ISO_8859_1);
+	            String request = new String(packet.getData(), StandardCharsets.ISO_8859_1);
+	            //Clean unused bytes
 	            request = request.trim();
+	            //Clear flag bytes used (CRLF)
+	            request = request.substring(0, request.length()-4);
 	            //Print request if it's from a different peer
 	            if(request.contains(server.ID))
 	            	continue;
