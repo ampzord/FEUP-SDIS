@@ -90,11 +90,19 @@ public class BackupListener extends Listener{
         	body = body + " " + request[i];
         
         if(request[0].compareTo("PUTCHUNK") == 0){
-
+        	//Check if there is available space for the whole chunk, otherwise abort
+            if(body.getBytes(StandardCharsets.ISO_8859_1).length/1000 + server.getUsedDiskSpace() >= server.getMaxDiskSpace()) {
+            	return;
+            }
+        	
             //Broadcast protocol to use
             System.out.println("Peer "+server.ID+": starting PUTCHUNK protocol");
             
             Path filePath = Paths.get("src/Chunks/"+fileId+"/"+chunkNo);
+            
+            //Update current disk usage in KBytes
+            server.setUsedDiskSpace(server.getUsedDiskSpace() + body.getBytes(StandardCharsets.ISO_8859_1).length/1000);
+            System.out.println("sdl"+server.getUsedDiskSpace());
             
             Files.write(filePath, body.getBytes(StandardCharsets.ISO_8859_1));
             

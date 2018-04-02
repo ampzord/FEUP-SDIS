@@ -19,6 +19,8 @@ import java.util.List;
 public class Server extends Thread{
 	//Extra Info
 	Path filesPath = Paths.get("src/Files");
+	private int maxDiskSpace = 10000;
+	private int usedDiskSpace = 0;
 	
     //ID & Version
     protected String ID;
@@ -343,5 +345,21 @@ public class Server extends Thread{
         } catch (IOException e) {
            e.printStackTrace();
         } 
-     } 
+     }
+
+	public int getUsedDiskSpace() {
+		return usedDiskSpace;
+	}
+
+	public void setUsedDiskSpace(int usedDiskSpace) {
+		this.usedDiskSpace = usedDiskSpace;
+	}
+
+	public int getMaxDiskSpace() {
+		return maxDiskSpace;
+	}
+
+	public void setMaxDiskSpace(int maxDiskSpace) {
+		this.maxDiskSpace = maxDiskSpace;
+	} 
 }

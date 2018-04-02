@@ -122,7 +122,12 @@ private void protocol(String[] request) throws IOException, InterruptedException
 			String filePath = filesPath.toAbsolutePath().toString();
 			
 			File chunk = new File(filePath);
+			
+			//Update current disk usage in KBytes
+            server.setUsedDiskSpace((int) (server.getUsedDiskSpace() - chunk.length()/1000));
+			
 			deleteDir(chunk);
+			
 			System.out.println("Chunks of FileId: " + fileId + " have been successfuly deleted.");
 			
 			//Delete File from src/Files
