@@ -207,12 +207,6 @@ public class Server extends Thread{
         
         //DELETE
         else if (request[0].compareTo("DELETE") == 0) {
-<<<<<<< HEAD
-        	String filePath = "src/"+request[1], fileId = getFileId(filePath);
-        	int chunkNo;
-=======
->>>>>>> eff61ec38a5e161d521b2fdfd7f2b9a00fa62b10
-        	
         	//Broadcast protocol to use
             System.out.println("Peer: " + ID + " starting DELETE protocol");
         	
@@ -227,22 +221,8 @@ public class Server extends Thread{
             	// Header for initiator peer
             	String header = "DELETE " + version + " " + ID + " " + fileId + " " + CRLF + CRLF;
                 
-<<<<<<< HEAD
-	            for(int attempt = 1; attempt <= 5; attempt++) {
-	                DatagramPacket packet = new DatagramPacket(header.getBytes(), header.length(), MC_address, MC_port);
-	                MC.send(packet);
-	                
-	                Thread.sleep(1000);
-	                
-	                if(RL.getChunks().get(chunkNo) != null) {
-	                	//Files.write(path, new String(RL.getChunks().get(chunkNo), StandardCharsets.ISO_8859_1).getBytes());
-	                	break;
-	                }
-	            }    
-=======
-                DatagramPacket packet = new DatagramPacket(header.getBytes(), header.length(), MC_address, MC_port);
+            	DatagramPacket packet = new DatagramPacket(header.getBytes(), header.length(), MC_address, MC_port);
                 MC.send(packet);
->>>>>>> eff61ec38a5e161d521b2fdfd7f2b9a00fa62b10
             }
             
         }

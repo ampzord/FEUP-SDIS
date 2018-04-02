@@ -6,15 +6,8 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
-<<<<<<< HEAD
 import java.nio.charset.StandardCharsets;
-=======
-import java.nio.charset.Charset;
-import java.nio.file.DirectoryNotEmptyException;
->>>>>>> eff61ec38a5e161d521b2fdfd7f2b9a00fa62b10
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Random;
@@ -75,33 +68,6 @@ public class ControlListener extends Listener {
 		
 		String operation = request[0];
 		
-<<<<<<< HEAD
-		//BACKUP
-		if(operation.compareTo("STORED") == 0) {
-			Integer replicationDeg = server.files.get(fileId).getReplicationDeg();
-            server.files.get(fileId).setReplicationDeg(replicationDeg+1);
-		}
-		//RESTORE
-		else if(operation.compareTo("GETCHUNK") == 0) {
-			//Broadcast end of protocol
-    		System.out.println("Peer "+server.ID+": started GETCHUNK protocol");
-    		
-			Path path = Paths.get("src/Chunks/"+fileId+"/"+chunkNo);
-			byte[] chunk = Files.readAllBytes(path);
-
-			//Broadcast after random delay
-    		Random rand = new Random();
-    		int delay = rand.nextInt(400);
-    		Thread.sleep(delay);
-    		
-    		String msg = "CHUNK "+version+" "+server.ID+" "+fileId+" "+chunkNo+" "+server.CRLF+server.CRLF+ new String(chunk, StandardCharsets.ISO_8859_1);
-    		
-    		DatagramPacket packet = new DatagramPacket(msg.getBytes(StandardCharsets.ISO_8859_1), msg.length(), MDR_address, MDR_port);
-            MDR.send(packet);
-            
-            //Broadcast end of protocol
-    		System.out.println("Peer "+server.ID+": finished GETCHUNK protocol");
-=======
 		if (operation.compareTo("STORED") == 0 || operation.compareTo("GETCHUNK") == 0) {
 			String version = request[1];
 			//String senderId = request[2];
@@ -129,15 +95,14 @@ public class ControlListener extends Listener {
 	    		int delay = rand.nextInt(400);
 	    		Thread.sleep(delay);
 	    		
-	    		String msg = "CHUNK "+version+" "+server.ID+" "+fileId+" "+chunkNo+" "+server.CRLF+server.CRLF+chunk;
+	    		String msg = "CHUNK "+version+" "+server.ID+" "+fileId+" "+chunkNo+" "+server.CRLF+server.CRLF+new String(chunk, StandardCharsets.ISO_8859_1);
 	    		
-	    		DatagramPacket packet = new DatagramPacket(msg.getBytes(Charset.forName("ISO_8859_1")), msg.length(), MDR_address, MDR_port);
+	    		DatagramPacket packet = new DatagramPacket(msg.getBytes(StandardCharsets.ISO_8859_1), msg.length(), MDR_address, MDR_port);
 	            MDR.send(packet);
 	            
 	            //Broadcast end of protocol
 	    		System.out.println("Peer "+server.ID+": finished GETCHUNK protocol");
 			}
->>>>>>> eff61ec38a5e161d521b2fdfd7f2b9a00fa62b10
 		}
 
 		//DELETE
