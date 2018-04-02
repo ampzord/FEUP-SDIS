@@ -1,13 +1,16 @@
 package src;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.nio.charset.Charset;
+import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Random;
@@ -65,50 +68,83 @@ public class ControlListener extends Listener {
 	}
 
 	private void protocol(String[] request) throws IOException, InterruptedException {
+		
 		String operation = request[0];
-		String version = request[1];
-		//String senderId = request[2];
-		String fileId = request[3];
-		String chunkNo = request[4];
-		String flags = request[5];
 		
-		if(!flags.contains(server.CRLF+server.CRLF)){
-        	System.out.println("	Invalid flags");
-        	return;
-        }
-		
-		//BACKUP
-		if(operation.compareTo("STORED") == 0) {
-			Integer replicationDeg = server.files.get(fileId).getReplicationDeg();
-            server.files.get(fileId).setReplicationDeg(replicationDeg+1);
-		}
-		//RESTORE
-		else if(operation.compareTo("GETCHUNK") == 0) {
-			Path path = Paths.get("src/Chunks/"+fileId+"/"+chunkNo);
-			byte[] chunk = Files.readAllBytes(path);
+		if (operation.compareTo("STORED") == 0 || operation.compareTo("GETCHUNK") == 0) {
+			String version = request[1];
+			//String senderId = request[2];
+			String fileId = request[3];
+			String chunkNo = request[4];
+			String flags = request[5];
 			
-			//Broadcast after random delay
-    		Random rand = new Random();
-    		int delay = rand.nextInt(400);
-    		Thread.sleep(delay);
-    		
-    		String msg = "CHUNK "+version+" "+server.ID+" "+fileId+" "+chunkNo+" "+server.CRLF+server.CRLF+chunk;
-    		
-    		DatagramPacket packet = new DatagramPacket(msg.getBytes(Charset.forName("ISO_8859_1")), msg.length(), MDR_address, MDR_port);
-            MDR.send(packet);
-            
-            //Broadcast end of protocol
-    		System.out.println("Peer "+server.ID+": finished GETCHUNK protocol");
+			if(!flags.contains(server.CRLF+server.CRLF)){
+	        	System.out.println("	Invalid flags");
+	        	return;
+	        }
+			
+			//BACKUP
+			if(operation.compareTo("STORED") == 0) {
+				Integer replicationDeg = server.files.get(fileId).getReplicationDeg();
+	            server.files.get(fileId).setReplicationDeg(replicationDeg+1);
+			}
+			//RESTORE
+			else if(operation.compareTo("GETCHUNK") == 0) {
+				Path path = Paths.get("src/Chunks/"+fileId+"/"+chunkNo);
+				byte[] chunk = Files.readAllBytes(path);
+				
+				//Broadcast after random delay
+	    		Random rand = new Random();
+	    		int delay = rand.nextInt(400);
+	    		Thread.sleep(delay);
+	    		
+	    		String msg = "CHUNK "+version+" "+server.ID+" "+fileId+" "+chunkNo+" "+server.CRLF+server.CRLF+chunk;
+	    		
+	    		DatagramPacket packet = new DatagramPacket(msg.getBytes(Charset.forName("ISO_8859_1")), msg.length(), MDR_address, MDR_port);
+	            MDR.send(packet);
+	            
+	            //Broadcast end of protocol
+	    		System.out.println("Peer "+server.ID+": finished GETCHUNK protocol");
+			}
 		}
+
 		//DELETE
 		else if (operation.compareTo("DELETE") == 0) {
+			//String senderId = request[2];
+			String fileId = request[3];
+			String flags = request[4];
 			
-			// src/chunks/fileId/number
-			String string_path = "src/chunks/" + fileId + "/" + chunkNo;
+			if(!flags.contains(server.CRLF+server.CRLF)){
+	        	System.out.println("	Invalid flags");
+	        	return;
+	        }
+
+			Path filesPath = Paths.get("src/Chunks/" + fileId);
+			String filePath = filesPath.toAbsolutePath().toString();
 			
-			Path path = FileSystems.getDefault().getPath(string_path);
-	        Files.delete(path);
+			//System.out.println("FilePath : " + filePath);
 			
+			File file = new File(filePath);
+			deleteDir(file);
+			
+			System.out.println("Chunk of FileId: " + fileId + " Successfuly removed.");
+			
+			//Broadcast end of protocol
+    		System.out.println("Peer "+server.ID+": finished DELETE protocol");
+		}
+		else {
+			 System.out.println("Incorrect message sent to Control Listener..");
 		}
 	}
+	
+	private void deleteDir(File file) {
+	    File[] contents = file.listFiles();
+	    if (contents != null) {
+	        for (File f : contents) {
+	            deleteDir(f);
+	        }
+	    }
+	    file.delete();
+	}
+	
 }
