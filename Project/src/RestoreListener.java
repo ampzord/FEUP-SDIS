@@ -6,7 +6,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.UnknownHostException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.util.Hashtable;
 
@@ -22,7 +22,7 @@ public class RestoreListener extends Listener{
     protected InetAddress MC_address;
     protected Integer MC_port;
 	
-    private Hashtable<Integer,byte[]> chunks = new Hashtable<Integer,byte[]>();
+    private Hashtable<Integer,String> chunks = new Hashtable<Integer,String>();
     
 	public RestoreListener(Server server, String MC_address, Integer MC_port, String MDR_address, Integer MDR_port) throws IOException, UnknownHostException, IOException {
 		super(server);
@@ -44,19 +44,17 @@ public class RestoreListener extends Listener{
         while(true) {
             try {
                 //Retrieve packet from the MDR channel
-	            byte[] buf = new byte[256];
+	            byte[] buf = new byte[65000];
 	
 	            DatagramPacket packet = new DatagramPacket(buf, buf.length);
 	            MDR.receive(packet);
-	            String request = new String(buf, 0, buf.length, Charset.forName("ISO_8859_1"));
+	            String request = new String(buf, 0, buf.length, StandardCharsets.ISO_8859_1);
 	            request = request.trim();
 	            String[] data = request.split(" ");
 	            //Print request if it's from a different peer
-	            if(server.files.get(data[3]) != null)
-	            	System.out.println("Peer " + server.ID + ": received request - " + request);
-	            else {
+	            if(server.files.get(data[3]) == null)
 	            	continue;
-	            }
+	            
 	            //Analize request & execute protocol
 	            try {
                     protocol(data);
@@ -71,36 +69,46 @@ public class RestoreListener extends Listener{
 	
 	private void protocol(String[] request) throws NoSuchAlgorithmException, IOException, InterruptedException{
 		String operation = request[0];
-        String data = request[5];
+        String version = request[1];
+        String senderId = request[2];
+        String fileId = request[3];
         int chunkNo = Integer.parseInt(request[4]);
-        if(!data.contains(server.CRLF+server.CRLF)){
+        
+        System.out.println("Peer "+server.ID+": received request - "+operation+" "+version+" "+senderId+" "+fileId+" "+chunkNo);
+        
+        if(!request[5].contains(server.CRLF+server.CRLF)){
         	System.out.println("	Invalid flags");
         	return;
         }
+        String body = request[5].substring(8);
+        
+        for(int i = 6; i < request.length; i++)
+        	body = body + " " + request[i];
         
         if(operation.compareTo("CHUNK") == 0){
             //Broadcast protocol to use
             System.out.println("Peer " + server.ID + ": starting CHUNK protocol");
             
-            //Add chunk to Hashtable if it hasn't already
-            String body = data.substring(8);
-            
-            //Broadcast end of protocol
-    		System.out.println("Peer "+server.ID+": finished CHUNK protocol");
-            
-            if(getChunks().get(chunkNo) == null)
-            	getChunks().put(chunkNo, body.getBytes());
+            if(getChunks().get(chunkNo) == null) {
+            	getChunks().put(chunkNo, body);
+
+            	//Broadcast end of protocol
+        		System.out.println("Peer "+server.ID+": finished CHUNK protocol");
+            }
             //When duplicate chunk is received, ignore it
-            else
+            else {
+            	//Broadcast end of protocol
+        		System.out.println("Peer "+server.ID+": finished CHUNK protocol");
             	return;
+            }
         }
 	}
 
-	public Hashtable<Integer,byte[]> getChunks() {
+	public Hashtable<Integer, String> getChunks() {
 		return chunks;
 	}
 
-	public void setChunks(Hashtable<Integer,byte[]> chunks) {
+	public void setChunks(Hashtable<Integer, String> chunks) {
 		this.chunks = chunks;
 	}
 }

@@ -2,7 +2,6 @@ package src;
 
 import java.io.IOException;
 import java.security.MessageDigest;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.net.*;
@@ -10,6 +9,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -101,11 +101,11 @@ public class Server extends Thread{
         while(true){
             try {
                 //Retrieve packet from the Control channel
-                byte[] buf = new byte[256];
+                byte[] buf = new byte[65000];
 
                 DatagramPacket packet = new DatagramPacket(buf, buf.length);
                 SC.receive(packet);
-                String request = new String(buf, 0, buf.length, Charset.forName("ISO_8859_1"));
+                String request = new String(buf, 0, buf.length, StandardCharsets.ISO_8859_1);
                 request = request.trim();
                 //Print request
                 System.out.println("Peer "+ID+": received request - "+request);
@@ -151,18 +151,19 @@ public class Server extends Thread{
             
             //Start sending chunks to the multicast data channel(MDB)
             int i;
+            System.out.println(Nchunks);
             for(i = 0; i < (int)Nchunks; i++){
                 chunkNo = i;
 
                 //Prepare HEADER
                 String header = "PUTCHUNK " + version + " " + ID + " " + fileId + " " + chunkNo + " " + replicationDeg + " " + CRLF + CRLF;
                 //Prepare BODY
-                String body = new String(Arrays.copyOfRange(chunks, i*64000, (i+1)*64000), Charset.forName("ISO_8859_1"));
+                String body = new String(Arrays.copyOfRange(chunks, i*64000, (i+1)*64000), StandardCharsets.ISO_8859_1);
                 //Create chunk
                 String chunk = header + body;
 
                 for(int attempt = 1; attempt <= 5; attempt++) {
-	                DatagramPacket packet = new DatagramPacket(chunk.getBytes(Charset.forName("ISO_8859_1")), chunk.length(), MDB_address, MDB_port);
+	                DatagramPacket packet = new DatagramPacket(chunk.getBytes(StandardCharsets.ISO_8859_1), chunk.length(), MDB_address, MDB_port);
 	                MDB.send(packet);
 	                
 	                Thread.sleep(1000);
@@ -180,7 +181,8 @@ public class Server extends Thread{
         	
         	//Broadcast protocol to use
             System.out.println("Peer: " + ID + " starting RESTORE protocol");
-
+            
+            Files.deleteIfExists(path);
             
             for(int i = 0; i < files.get(fileId).getNchunks(); i++) {
             	// Header for initiator peer
@@ -188,16 +190,16 @@ public class Server extends Thread{
                 
 	            for(int attempt = 0; attempt < 5; attempt++) {
 	            	chunkNo = i;
-	                DatagramPacket packet = new DatagramPacket(header.getBytes(Charset.forName("ISO_8859_1")), header.length(), MC_address, MC_port);
+	                DatagramPacket packet = new DatagramPacket(header.getBytes(StandardCharsets.ISO_8859_1), header.length(), MC_address, MC_port);
 	                MC.send(packet);
 	                
 	                Thread.sleep(1000);
 	                
 	                if(RL.getChunks().get(chunkNo) != null) {
-	                	Files.write(path, RL.getChunks().get(chunkNo));
+	                	Files.write(path, RL.getChunks().get(chunkNo).getBytes(StandardCharsets.ISO_8859_1), StandardOpenOption.APPEND, StandardOpenOption.CREATE);
 	                	break;
 	                }
-	            }    
+	            } 
             }
             //Broadcast end of protocol
     		System.out.println("Peer "+ID+": finished RESTORE protocol");
@@ -206,7 +208,6 @@ public class Server extends Thread{
         //DELETE
         else if (request[0].compareTo("DELETE") == 0) {
         	String filePath = "src/"+request[1], fileId = getFileId(filePath);
-        	Path path = Paths.get(filePath);
         	int chunkNo;
         	
         	//Broadcast protocol to use
@@ -224,7 +225,7 @@ public class Server extends Thread{
 	                Thread.sleep(1000);
 	                
 	                if(RL.getChunks().get(chunkNo) != null) {
-	                	Files.write(path, new String(RL.getChunks().get(chunkNo), Charset.forName("ISO_8859_1")).getBytes());
+	                	//Files.write(path, new String(RL.getChunks().get(chunkNo), StandardCharsets.ISO_8859_1).getBytes());
 	                	break;
 	                }
 	            }    

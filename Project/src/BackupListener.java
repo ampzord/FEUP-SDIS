@@ -1,20 +1,15 @@
 package src;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.UnknownHostException;
-import java.nio.charset.Charset;
-import java.nio.file.FileAlreadyExistsException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.security.NoSuchAlgorithmException;
 import java.util.Random;
 
@@ -50,18 +45,16 @@ public class BackupListener extends Listener{
         while(true) {
             try {
                 //Retrieve packet from the MDB channel
-	            byte[] buf = new byte[256];
+	            byte[] buf = new byte[65000];
 	
 	            DatagramPacket packet = new DatagramPacket(buf, buf.length);
 	            MDB.receive(packet);
-	            String request = new String(buf, 0, buf.length, Charset.forName("ISO_8859_1"));
+	            String request = new String(buf, 0, buf.length, StandardCharsets.ISO_8859_1);
 	            request = request.trim();
 	            //Print request if it's from a different peer
-	            if(!request.contains(server.ID))
-	            	System.out.println("Peer "+server.ID+": received request - "+request);
-	            else {
+	            if(request.contains(server.ID))
 	            	continue;
-	            }
+	            
 	            //Analize request & execute protocol
 	            try {
                     protocol(request.split(" "));
@@ -75,14 +68,23 @@ public class BackupListener extends Listener{
 	}
 	
 	private void protocol(String[] request) throws NoSuchAlgorithmException, IOException, InterruptedException{
-        String version = request[1];
+		String operation = request[0];
+		String version = request[1];
+        String senderId = request[2];
         String fileId = request[3];
         int chunkNo = Integer.parseInt(request[4]);
+        String replicationDeg = request[5];
+        
+        System.out.println("Peer "+server.ID+": received request - "+operation+" "+version+" "+senderId+" "+fileId+" "+chunkNo+" "+replicationDeg);
+        
         if(!request[6].contains(server.CRLF+server.CRLF)){
         	System.out.println("Invalid flags");
         	return;
         }
         String body = request[6].substring(8);
+        
+        for(int i = 7; i < request.length; i++)
+        	body = body + " " + request[i];
         
         if(request[0].compareTo("PUTCHUNK") == 0){
 
@@ -91,7 +93,7 @@ public class BackupListener extends Listener{
             
             Path filePath = Paths.get("src/Chunks/"+fileId+"/"+chunkNo);
             
-            Files.write(filePath, body.getBytes());
+            Files.write(filePath, body.getBytes(StandardCharsets.ISO_8859_1));
             
             //Broadcast after random delay
     		Random rand = new Random();
@@ -100,7 +102,7 @@ public class BackupListener extends Listener{
     		
     		String msg = "STORED "+version+" "+server.ID+" "+fileId+" "+chunkNo+" "+server.CRLF+server.CRLF;
     		
-    		DatagramPacket packet = new DatagramPacket(msg.getBytes(Charset.forName("ISO_8859_1")), msg.length(), MC_address, MC_port);
+    		DatagramPacket packet = new DatagramPacket(msg.getBytes(StandardCharsets.ISO_8859_1), msg.length(), MC_address, MC_port);
             MC.send(packet);
             
             //Broadcast end of protocol

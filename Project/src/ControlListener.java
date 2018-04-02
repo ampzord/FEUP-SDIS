@@ -5,7 +5,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -44,11 +44,11 @@ public class ControlListener extends Listener {
         while(true) {
             try {
                 //Retrieve packet from the MC channel
-	            byte[] buf = new byte[256];
+	            byte[] buf = new byte[65000];
 	
 	            DatagramPacket packet = new DatagramPacket(buf, buf.length);
 	            MC.receive(packet);
-	            String request = new String(buf, 0, buf.length, Charset.forName("ISO_8859_1"));
+	            String request = new String(buf, 0, buf.length, StandardCharsets.ISO_8859_1);
 	            request = request.trim();
 	            //Print request & continue IF fileId is in this peer's system
 	            if(server.files.get(request.split(" ")[3]) != null) {
@@ -84,17 +84,20 @@ public class ControlListener extends Listener {
 		}
 		//RESTORE
 		else if(operation.compareTo("GETCHUNK") == 0) {
+			//Broadcast end of protocol
+    		System.out.println("Peer "+server.ID+": started GETCHUNK protocol");
+    		
 			Path path = Paths.get("src/Chunks/"+fileId+"/"+chunkNo);
 			byte[] chunk = Files.readAllBytes(path);
-			
+
 			//Broadcast after random delay
     		Random rand = new Random();
     		int delay = rand.nextInt(400);
     		Thread.sleep(delay);
     		
-    		String msg = "CHUNK "+version+" "+server.ID+" "+fileId+" "+chunkNo+" "+server.CRLF+server.CRLF+chunk;
+    		String msg = "CHUNK "+version+" "+server.ID+" "+fileId+" "+chunkNo+" "+server.CRLF+server.CRLF+ new String(chunk, StandardCharsets.ISO_8859_1);
     		
-    		DatagramPacket packet = new DatagramPacket(msg.getBytes(Charset.forName("ISO_8859_1")), msg.length(), MDR_address, MDR_port);
+    		DatagramPacket packet = new DatagramPacket(msg.getBytes(StandardCharsets.ISO_8859_1), msg.length(), MDR_address, MDR_port);
             MDR.send(packet);
             
             //Broadcast end of protocol
