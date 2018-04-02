@@ -19,6 +19,8 @@ import java.util.List;
 public class Server extends Thread{
 	//Extra Info
 	Path filesPath = Paths.get("src/Files");
+	private int maxDiskSpace = 10000;
+	private int usedDiskSpace = 0;
 	
     //ID & Version
     protected String ID;
@@ -155,16 +157,21 @@ public class Server extends Thread{
             
             //Start sending chunks to the multicast data channel(MDB)
             int i;
-            System.out.println(Nchunks);
             for(i = 0; i < (int)Nchunks; i++){
                 chunkNo = i;
 
                 //Prepare HEADER
                 String header = "PUTCHUNK " + version + " " + ID + " " + fileId + " " + chunkNo + " " + replicationDeg + " " + CRLF + CRLF;
+                
+                String body;
                 //Prepare BODY
-                String body = new String(Arrays.copyOfRange(chunks, i*64000, (i+1)*64000), StandardCharsets.ISO_8859_1);
+                if((i+1)*64000 <= file.length()) {
+                	body = new String(Arrays.copyOfRange(chunks, i*64000, (i+1)*64000), StandardCharsets.ISO_8859_1);
+                }else {
+                	body = new String(Arrays.copyOfRange(chunks, i*64000, (int) file.length()), StandardCharsets.ISO_8859_1);
+                }
                 //Create chunk
-                String chunk = header + body;
+                String chunk = header + body + CRLF;
 
                 for(int attempt = 1; attempt <= 5; attempt++) {
 	                DatagramPacket packet = new DatagramPacket(chunk.getBytes(StandardCharsets.ISO_8859_1), chunk.length(), MDB_address, MDB_port);
@@ -203,8 +210,10 @@ public class Server extends Thread{
 	                	Files.write(path, RL.getChunks().get(chunkNo).getBytes(StandardCharsets.ISO_8859_1), StandardOpenOption.APPEND, StandardOpenOption.CREATE);
 	                	break;
 	                }
-	            } 
+	            }
             }
+            RL.setChunks(new Hashtable<Integer,String>());
+            
             //Broadcast end of protocol
     		System.out.println("Peer "+ID+": finished RESTORE protocol");
         }
@@ -347,6 +356,22 @@ public class Server extends Thread{
         		Path pathToDeleteFile = Paths.get("./src/Files/" + f.getName());
         		Files.delete(pathToDeleteFile);
             	}
-            }
         }
+    }
+
+	public int getUsedDiskSpace() {
+		return usedDiskSpace;
+	}
+
+	public void setUsedDiskSpace(int usedDiskSpace) {
+		this.usedDiskSpace = usedDiskSpace;
+	}
+
+	public int getMaxDiskSpace() {
+		return maxDiskSpace;
+	}
+
+	public void setMaxDiskSpace(int maxDiskSpace) {
+		this.maxDiskSpace = maxDiskSpace;
+	} 
 }

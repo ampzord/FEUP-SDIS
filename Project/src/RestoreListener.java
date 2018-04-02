@@ -43,13 +43,17 @@ public class RestoreListener extends Listener{
 		
         while(true) {
             try {
-                //Retrieve packet from the MDR channel
+            	//Retrieve packet from the MDR channel
 	            byte[] buf = new byte[65000];
 	
 	            DatagramPacket packet = new DatagramPacket(buf, buf.length);
 	            MDR.receive(packet);
 	            String request = new String(buf, 0, buf.length, StandardCharsets.ISO_8859_1);
+	            //Clean unused bytes
 	            request = request.trim();
+	            //Clear flag bytes used (CRLF)
+	            request = request.substring(0, request.length()-4);
+	            //Split header
 	            String[] data = request.split(" ");
 	            //Print request if it's from a different peer
 	            if(server.files.get(data[3]) == null)
@@ -83,7 +87,7 @@ public class RestoreListener extends Listener{
         String body = request[5].substring(8);
         
         for(int i = 6; i < request.length; i++)
-        	body = body + " " + request[i];
+        	body += " " + request[i];
         
         if(operation.compareTo("CHUNK") == 0){
             //Broadcast protocol to use

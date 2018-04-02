@@ -96,8 +96,8 @@ private void protocol(String[] request) throws IOException, InterruptedException
 	    		Random rand = new Random();
 	    		int delay = rand.nextInt(400);
 	    		Thread.sleep(delay);
-	    		
-	    		String msg = "CHUNK "+version+" "+server.ID+" "+fileId+" "+chunkNo+" "+server.CRLF+server.CRLF+chunk;
+	    	
+	    		String msg = "CHUNK "+version+" "+server.ID+" "+fileId+" "+chunkNo+" "+server.CRLF+server.CRLF+new String(chunk, StandardCharsets.ISO_8859_1)+server.CRLF;
 	    		
 	    		DatagramPacket packet = new DatagramPacket(msg.getBytes(Charset.forName("ISO_8859_1")), msg.length(), MDR_address, MDR_port);
 	            MDR.send(packet);
@@ -122,7 +122,12 @@ private void protocol(String[] request) throws IOException, InterruptedException
 			String filePath = filesPath.toAbsolutePath().toString();
 			
 			File chunk = new File(filePath);
+			
+			//Update current disk usage in KBytes
+            server.setUsedDiskSpace((int) (server.getUsedDiskSpace() - chunk.length()/1000));
+			
 			deleteDir(chunk);
+			
 			System.out.println("Chunks of FileId: " + fileId + " have been successfuly deleted.");
 			
 			//Delete File from src/Files

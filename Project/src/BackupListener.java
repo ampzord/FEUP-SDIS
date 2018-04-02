@@ -49,8 +49,11 @@ public class BackupListener extends Listener{
 	
 	            DatagramPacket packet = new DatagramPacket(buf, buf.length);
 	            MDB.receive(packet);
-	            String request = new String(buf, 0, buf.length, StandardCharsets.ISO_8859_1);
+	            String request = new String(packet.getData(), StandardCharsets.ISO_8859_1);
+	            //Clean unused bytes
 	            request = request.trim();
+	            //Clear flag bytes used (CRLF)
+	            request = request.substring(0, request.length()-4);
 	            //Print request if it's from a different peer
 	            if(request.contains(server.ID))
 	            	continue;
@@ -87,11 +90,19 @@ public class BackupListener extends Listener{
         	body = body + " " + request[i];
         
         if(request[0].compareTo("PUTCHUNK") == 0){
-
+        	//Check if there is available space for the whole chunk, otherwise abort
+            if(body.getBytes(StandardCharsets.ISO_8859_1).length/1000 + server.getUsedDiskSpace() >= server.getMaxDiskSpace()) {
+            	return;
+            }
+        	
             //Broadcast protocol to use
             System.out.println("Peer "+server.ID+": starting PUTCHUNK protocol");
             
             Path filePath = Paths.get("src/Chunks/"+fileId+"/"+chunkNo);
+            
+            //Update current disk usage in KBytes
+            server.setUsedDiskSpace(server.getUsedDiskSpace() + body.getBytes(StandardCharsets.ISO_8859_1).length/1000);
+            System.out.println("sdl"+server.getUsedDiskSpace());
             
             Files.write(filePath, body.getBytes(StandardCharsets.ISO_8859_1));
             
