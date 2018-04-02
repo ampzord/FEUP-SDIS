@@ -92,8 +92,12 @@ public class Server extends Thread{
         this.MC_address = InetAddress.getByName(MC_address);
         this.MC_port = MC_port;
         this.MC = new DatagramSocket();
+        
+        clearChunks();
+        clearBackedUpFiles();
+        
     }
-
+    
     @Override
     public void run() {
     	System.out.println("Peer "+ID+": Ready for requests");
@@ -234,7 +238,7 @@ public class Server extends Thread{
 		            The desired replication degree
 		            
 		            For each chunk of the file:
-		            Its id
+		            Its id (dentro da fileId)
 		            Its perceived replication degree
 		            
             For each chunk it stores:
@@ -256,7 +260,7 @@ public class Server extends Thread{
                 	listOfBackedUpFiles.add(file.getName());
                 }
             }
-            System.out.println("Current Backed Up Files:");
+            System.out.println("Current Backed Up Files:\n");
             
             for (int i = 0; i < listOfBackedUpFiles.size(); i++) {   	
     			if (files.containsKey(listOfBackedUpFiles.get(i))) {
@@ -266,12 +270,11 @@ public class Server extends Thread{
     				System.out.println("File ID : " + listOfBackedUpFiles.get(i));
     				System.out.println("Replication Degree : " + fileInformation.getReplicationDeg());
     				
-    				System.out.println("Chunk of the file: ");
+    				System.out.println("Chunk of the file:\n");
     				System.out.println("ID of chunk: " );
     				//System.out.println("Replication Degree of Chunk: " + replicationDeg);
     			}
             }
-
         }
         /*
         //RECLAIM
@@ -323,18 +326,27 @@ public class Server extends Thread{
     	BL.MC.close();
     	RL.MDR.close();
     }
+
+    private void clearChunks() {
+		File chunks = new File("./src/Chunks");
+        File[] chunksList = chunks.listFiles();
+        
+        for(File f : chunksList){
+            if(f.isDirectory()){
+            	ControlListener.deleteDir(f);
+            }
+        }
+    }
     
-    public static void displayDirectoryContents(File dir) {
-        try { 
-           File[] files = dir.listFiles();
-           for (File file : files) {
-              if (file.isDirectory()) {
-                 System.out.println("directory:" + file.getCanonicalPath());
-                 displayDirectoryContents(file);
-              }
-           } 
-        } catch (IOException e) {
-           e.printStackTrace();
-        } 
-     } 
+    private void clearBackedUpFiles() throws IOException {
+    	File backedUpFiles = new File("./src/Files");
+        File[] filesList = backedUpFiles.listFiles();
+        
+        for(File f : filesList){
+            if(f.isFile()){
+        		Path pathToDeleteFile = Paths.get("./src/Files/" + f.getName());
+        		Files.delete(pathToDeleteFile);
+            	}
+            }
+        }
 }

@@ -152,7 +152,7 @@ private void protocol(String[] request) throws IOException, InterruptedException
 		}
 	}
 	
-	private void deleteDir(File file) {
+	public static void deleteDir(File file) {
 	    File[] contents = file.listFiles();
 	    if (contents != null) {
 	        for (File f : contents) {
