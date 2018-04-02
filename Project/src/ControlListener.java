@@ -6,10 +6,12 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.NoSuchAlgorithmException;
 import java.util.Random;
 
 public class ControlListener extends Listener {
@@ -58,13 +60,13 @@ public class ControlListener extends Listener {
 	            	continue;
 	            }
 	            protocol(request.split(" "));
-            }catch(IOException | InterruptedException e){
+            }catch(IOException | InterruptedException | NoSuchAlgorithmException e){
             	System.out.println("Exception caught in Server thread");
             }
 	    }
 	}
 
-	private void protocol(String[] request) throws IOException, InterruptedException {
+private void protocol(String[] request) throws IOException, InterruptedException, NoSuchAlgorithmException {
 		
 		String operation = request[0];
 		
@@ -95,9 +97,9 @@ public class ControlListener extends Listener {
 	    		int delay = rand.nextInt(400);
 	    		Thread.sleep(delay);
 	    		
-	    		String msg = "CHUNK "+version+" "+server.ID+" "+fileId+" "+chunkNo+" "+server.CRLF+server.CRLF+new String(chunk, StandardCharsets.ISO_8859_1);
+	    		String msg = "CHUNK "+version+" "+server.ID+" "+fileId+" "+chunkNo+" "+server.CRLF+server.CRLF+chunk;
 	    		
-	    		DatagramPacket packet = new DatagramPacket(msg.getBytes(StandardCharsets.ISO_8859_1), msg.length(), MDR_address, MDR_port);
+	    		DatagramPacket packet = new DatagramPacket(msg.getBytes(Charset.forName("ISO_8859_1")), msg.length(), MDR_address, MDR_port);
 	            MDR.send(packet);
 	            
 	            //Broadcast end of protocol
@@ -115,17 +117,33 @@ public class ControlListener extends Listener {
 	        	System.out.println("	Invalid flags");
 	        	return;
 	        }
-
+			//Delete Chunks
 			Path filesPath = Paths.get("src/Chunks/" + fileId);
 			String filePath = filesPath.toAbsolutePath().toString();
 			
-			//System.out.println("FilePath : " + filePath);
+			File chunk = new File(filePath);
+			deleteDir(chunk);
+			System.out.println("Chunks of FileId: " + fileId + " have been successfuly deleted.");
 			
-			File file = new File(filePath);
-			deleteDir(file);
-			
-			System.out.println("Chunk of FileId: " + fileId + " Successfuly removed.");
-			
+			//Delete File from src/Files
+            File backedUpFiles = new File("./src/Files");
+            File[] filesList = backedUpFiles.listFiles();
+            
+            for(File f : filesList){
+                if(f.isFile()){
+                	Path temp_path = Paths.get("src/Files/" + f.getName());
+                	String flpath = temp_path.toAbsolutePath().toString();
+                	String tempFileId = Server.getFileId(flpath);
+                	
+                	if (tempFileId.compareTo(fileId) == 0) {
+                		Path pathToDeleteFile = Paths.get("./src/Files/" + f.getName());
+                		Files.delete(pathToDeleteFile);
+                		System.out.println("File : " + f.getName() + " has been successfuly deleted.");
+                		break;
+                	}
+                }
+            }
+            
 			//Broadcast end of protocol
     		System.out.println("Peer "+server.ID+": finished DELETE protocol");
 		}
