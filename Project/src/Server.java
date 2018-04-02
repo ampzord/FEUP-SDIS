@@ -219,10 +219,6 @@ public class Server extends Thread{
         	
             String filePath = filesPath.toAbsolutePath().toString()+"\\"+request[1];
             String fileId = getFileId(filePath);
-        	
-            System.out.println("FilePath :" + filePath);
-        	System.out.println("Number of NChunks: " + files.get(fileId).getNchunks());
-           
             
             for(int i = 0; i < files.get(fileId).getNchunks(); i++) {
             	// Header for initiator peer
@@ -304,7 +300,7 @@ public class Server extends Thread{
         }
     }
     
-    protected String getFileId(String fileName) throws NoSuchAlgorithmException, IOException {
+    protected static String getFileId(String fileName) throws NoSuchAlgorithmException, IOException {
         Path path = Paths.get(fileName);
         
         FileTime creationTime = (FileTime)Files.getAttribute(path, "lastModifiedTime");
