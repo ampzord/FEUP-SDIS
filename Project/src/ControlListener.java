@@ -77,10 +77,12 @@ public class ControlListener extends Listener {
         	return;
         }
 		
+		//BACKUP
 		if(operation.compareTo("STORED") == 0) {
 			Integer replicationDeg = server.files.get(fileId).getReplicationDeg();
             server.files.get(fileId).setReplicationDeg(replicationDeg+1);
 		}
+		//RESTORE
 		else if(operation.compareTo("GETCHUNK") == 0) {
 			Path path = Paths.get("src/Chunks/"+fileId+"/"+chunkNo);
 			byte[] chunk = Files.readAllBytes(path);
@@ -98,6 +100,7 @@ public class ControlListener extends Listener {
             //Broadcast end of protocol
     		System.out.println("Peer "+server.ID+": finished GETCHUNK protocol");
 		}
+		//DELETE
 		else if (operation.compareTo("DELETE") == 0) {
 			
 			// src/chunks/fileId/number

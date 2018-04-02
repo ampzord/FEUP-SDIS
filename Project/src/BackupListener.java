@@ -98,13 +98,13 @@ public class BackupListener extends Listener{
     		int delay = rand.nextInt(400);
     		Thread.sleep(delay);
     		
-    		//Broadcast end of protocol
-    		System.out.println("Peer "+server.ID+": finished PUTCHUNK protocol");
-    		
     		String msg = "STORED "+version+" "+server.ID+" "+fileId+" "+chunkNo+" "+server.CRLF+server.CRLF;
     		
     		DatagramPacket packet = new DatagramPacket(msg.getBytes(Charset.forName("ISO_8859_1")), msg.length(), MC_address, MC_port);
             MC.send(packet);
+            
+            //Broadcast end of protocol
+    		System.out.println("Peer "+server.ID+": finished PUTCHUNK protocol");
         }
 	}
 }
