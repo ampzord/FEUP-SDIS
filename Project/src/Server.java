@@ -69,6 +69,15 @@ public class Server extends Thread{
     	
     	Server peer2 = new Server(4455, "224.0.0.2", 8001, "224.0.0.3", 8002, "224.0.0.4", 8003);
     	peer2.start();
+    	
+    	Server peer3 = new Server(4465, "224.0.0.2", 8001, "224.0.0.3", 8002, "224.0.0.4", 8003);
+    	peer3.start();
+    	
+    	Server peer4 = new Server(4475, "224.0.0.2", 8001, "224.0.0.3", 8002, "224.0.0.4", 8003);
+    	peer4.start();
+    	
+    	Server peer5 = new Server(4485, "224.0.0.2", 8001, "224.0.0.3", 8002, "224.0.0.4", 8003);
+    	peer5.start();
     }
     
     public Server(Integer SC_port, String MC_address, Integer MC_port, String MDB_address, Integer MDB_port, String MDR_address, Integer MDR_port) throws IOException, UnknownHostException, IOException{
@@ -195,7 +204,7 @@ public class Server extends Thread{
         	int chunkNo;
         	
         	//Broadcast protocol to use
-            System.out.println("Peer: " + ID + " starting RESTORE protocol");
+            System.out.println("Peer " + ID + ": starting RESTORE protocol");
             
             Files.deleteIfExists(path);
             
@@ -308,6 +317,9 @@ public class Server extends Thread{
         			Files.delete(chunkPath);
         		}
         	}
+            
+          //Broadcast protocol to use
+            System.out.println("Peer: " + ID + " finished RECLAIM protocol");
         }
         else {
         	System.out.println("Not valid operation..");
