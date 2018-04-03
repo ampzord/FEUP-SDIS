@@ -285,17 +285,42 @@ public class Server extends Thread{
             
             for (int i = 0; i < listOfBackedUpFiles.size(); i++) {   	
     			if (files.containsKey(listOfBackedUpFiles.get(i))) {
+    				
     				//Display information about backed up files
     				FileInfo fileInformation = files.get(listOfBackedUpFiles.get(i));
     				System.out.println("File path : " + fileInformation.getPath());
     				System.out.println("File ID : " + listOfBackedUpFiles.get(i));
-    				System.out.println("Replication Degree : " + fileInformation.getReplicationDeg());
+    				System.out.println("Desired Replication Degree : " + fileInformation.getReplicationDeg());
     				
-    				System.out.println("Chunk of the file:\n");
-    				System.out.println("ID of chunk: " );
-    				//System.out.println("Replication D egree of Chunk: " + replicationDeg);
+    				for (int j = 0; j < fileInformation.getNchunks(); j++) {
+	    				System.out.println("Chunk of the file:\n");
+	    				
+	    				String currDir = "src/Chunks/" + listOfBackedUpFiles.get(i);
+	    	            
+	    	            //get all folders created in the directory Chunks
+	    	            File dir = new File(currDir);
+	    	            File[] fileList = dir.listFiles();
+	    	            for (File file : fileList){
+	    	                if (file.isFile()){
+	    	                	System.out.println("ID of chunk: " + file.getName()); 
+	    	                }
+	    	            }    				
+    				}
     			}
             }
+            
+            System.out.println("For each chunk it stores:\n");
+            
+            for (int i = 0; i < chunks.size(); i++) {   
+    			System.out.println("ID : " + i);
+    			File file = new File(chunks.get(i));
+    			System.out.println("Size (KBytes): " + (file.length()/1000));
+            }
+            
+            System.out.println("Free Disk Space: " + (maxDiskSpace-usedDiskSpace));
+			System.out.println("Used Space: " + usedDiskSpace);
+            
+            
         }
         //RECLAIM
         else if (request[0].compareTo("RECLAIM") == 0) {        	
@@ -309,7 +334,7 @@ public class Server extends Thread{
         		File chunk = new File(chunkPath.toAbsolutePath().toString());
         		File parent = chunk.getParentFile();
         		chunks.remove(chunks.size()-1);
-        		usedDiskSpace -= chunk.length();
+        		usedDiskSpace -= chunk.length()/1000;
         		if(parent.listFiles().length <= 1) {
         			Files.delete(chunkPath);
         			Files.delete(parent.toPath());
