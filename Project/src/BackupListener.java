@@ -78,6 +78,12 @@ public class BackupListener extends Listener{
         int chunkNo = Integer.parseInt(request[4]);
         String replicationDeg = request[5];
         
+        Path filePath = Paths.get("src/Chunks/"+fileId+"/"+chunkNo);
+
+        if(server.chunks.contains(filePath.toAbsolutePath().toString())) {
+        	return;
+        }
+        
         System.out.println("Peer "+server.ID+": received request - "+operation+" "+version+" "+senderId+" "+fileId+" "+chunkNo+" "+replicationDeg);
         
         if(!request[6].contains(server.CRLF+server.CRLF)){
@@ -98,12 +104,9 @@ public class BackupListener extends Listener{
             //Broadcast protocol to use
             System.out.println("Peer "+server.ID+": starting PUTCHUNK protocol");
             
-            Path filePath = Paths.get("src/Chunks/"+fileId+"/"+chunkNo);
-            
             //Update current disk usage in KBytes
             server.setUsedDiskSpace(server.getUsedDiskSpace() + body.getBytes(StandardCharsets.ISO_8859_1).length/1000);
-            System.out.println("sdl"+server.getUsedDiskSpace());
-            
+            server.addChunk(filePath.toAbsolutePath().toString());
             Files.write(filePath, body.getBytes(StandardCharsets.ISO_8859_1));
             
             //Broadcast after random delay

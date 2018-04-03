@@ -84,8 +84,11 @@ private void protocol(String[] request) throws IOException, InterruptedException
 			
 			//BACKUP
 			if(operation.compareTo("STORED") == 0) {
+				server.addChunk(Paths.get("src/Chunks/"+fileId+"/"+chunkNo).toAbsolutePath().toString());
+				
 				Integer replicationDeg = server.files.get(fileId).getReplicationDeg();
 	            server.files.get(fileId).setReplicationDeg(replicationDeg+1);
+	            System.out.println(server.files.get(fileId).getReplicationDeg());
 			}
 			//RESTORE
 			else if(operation.compareTo("GETCHUNK") == 0) {
@@ -126,6 +129,7 @@ private void protocol(String[] request) throws IOException, InterruptedException
 			//Update current disk usage in KBytes
             server.setUsedDiskSpace((int) (server.getUsedDiskSpace() - chunk.length()/1000));
 			
+            server.removeFile(filesPath.toAbsolutePath().toString());
 			deleteDir(chunk);
 			
 			System.out.println("Chunks of FileId: " + fileId + " have been successfuly deleted.");

@@ -59,6 +59,9 @@ public class Server extends Thread{
     //Files Backed Up
     protected Hashtable<String,FileInfo> files = new Hashtable<String,FileInfo>();
     
+    //Chunks Backed Up
+    protected List<String> chunks = new ArrayList<String>();
+    
     public static void main(String[] args) throws SocketException, UnknownHostException, IOException{
         //Start peers
         Server peer1 = new Server(4445, "224.0.0.2", 8001, "224.0.0.3", 8002, "224.0.0.4", 8003);
@@ -182,11 +185,13 @@ public class Server extends Thread{
 	                	break;
                 }
             }
+            //Broadcast end of protocol
+            System.out.println("Peer "+ID+": finished BACKUP protocol");
+            System.out.println(getChunks());
         }
         //RESTORE
         else if (request[0].compareTo("RESTORE") == 0) {
         	String filePath = filesPath.toAbsolutePath().toString()+"\\"+request[1], fileId = getFileId(filePath);
-        	System.out.println("teste");
         	Path path = Paths.get("src/"+request[1]);
         	int chunkNo;
         	
@@ -233,7 +238,6 @@ public class Server extends Thread{
             	DatagramPacket packet = new DatagramPacket(header.getBytes(), header.length(), MC_address, MC_port);
                 MC.send(packet);
             }
-            
         }
         else if (request[0].compareTo("STATE") == 0) {
         	
@@ -281,25 +285,31 @@ public class Server extends Thread{
     				
     				System.out.println("Chunk of the file:\n");
     				System.out.println("ID of chunk: " );
-    				//System.out.println("Replication Degree of Chunk: " + replicationDeg);
+    				//System.out.println("Replication D egree of Chunk: " + replicationDeg);
     			}
             }
         }
-        /*
         //RECLAIM
-        else if (request[0].compareTo("RECLAIM") == 0) {
-        	String filePath = "src/"+request[1], fileId = getFileId(filePath);
-        	Path path = Paths.get(filePath);
-        	int chunkNo;
-        	
+        else if (request[0].compareTo("RECLAIM") == 0) {        	
         	//Broadcast protocol to use
             System.out.println("Peer: " + ID + " starting RECLAIM protocol");
-        
-            String header = "REMOVED " + version + " " + ID + " " + fileId + " " + chunkNo + " " + CRLF + CRLF;
             
-            DatagramPacket packet = new DatagramPacket(header.getBytes(), header.length(), MC_address, MC_port);
-            MC.send(packet);
-        }*/
+            maxDiskSpace = Integer.parseInt(request[1]);
+            
+            while(maxDiskSpace < usedDiskSpace) {
+        		Path chunkPath = Paths.get(chunks.get(chunks.size()-1));
+        		File chunk = new File(chunkPath.toAbsolutePath().toString());
+        		File parent = chunk.getParentFile();
+        		chunks.remove(chunks.size()-1);
+        		usedDiskSpace -= chunk.length();
+        		if(parent.listFiles().length <= 1) {
+        			Files.delete(chunkPath);
+        			Files.delete(parent.toPath());
+        		}else {
+        			Files.delete(chunkPath);
+        		}
+        	}
+        }
         else {
         	System.out.println("Not valid operation..");
         }
@@ -373,5 +383,34 @@ public class Server extends Thread{
 
 	public void setMaxDiskSpace(int maxDiskSpace) {
 		this.maxDiskSpace = maxDiskSpace;
+	}
+
+	public List<String> getChunks() {
+		return this.chunks;
+	}
+	
+	public boolean chunkExists(String chunk) {
+		return getChunks().contains(chunk);
+	}
+
+	public void setChunks(List<String> chunks) {
+		this.chunks = chunks;
+	}
+	
+	public void addChunk(String chunk) {
+		this.chunks.add(chunk);
 	} 
+	
+	public void removeChunk(String chunk) {
+		this.chunks.remove(chunks.indexOf(chunk));
+	}
+	
+	public void removeFile(String fileId) {
+		String chunk = fileId + "/";
+		int i = 0;
+		while(this.chunks.indexOf(chunk + i) != -1) {
+			this.chunks.remove(chunks.indexOf(chunk+i));
+			i++;
+		}	
+	}
 }
