@@ -187,7 +187,6 @@ public class Server extends Thread{
             }
             //Broadcast end of protocol
             System.out.println("Peer "+ID+": finished BACKUP protocol");
-            System.out.println(getChunks());
         }
         //RESTORE
         else if (request[0].compareTo("RESTORE") == 0) {

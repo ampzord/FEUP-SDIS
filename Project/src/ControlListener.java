@@ -88,7 +88,6 @@ private void protocol(String[] request) throws IOException, InterruptedException
 				
 				Integer replicationDeg = server.files.get(fileId).getReplicationDeg();
 	            server.files.get(fileId).setReplicationDeg(replicationDeg+1);
-	            System.out.println(server.files.get(fileId).getReplicationDeg());
 			}
 			//RESTORE
 			else if(operation.compareTo("GETCHUNK") == 0) {

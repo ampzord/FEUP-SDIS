@@ -7,4 +7,7 @@ java src/TestApp %ComputerName%:4455 RESTORE small.txt
 @PAUSE
 java src/TestApp %ComputerName%:4455 DELETE small.txt
 @PAUSE
-
+:loop
+set /p id="Enter Command: "
+%id%
+goto loop
